@@ -37,35 +37,7 @@ in the port journey. May require a convention (an allowlist file the
 agent runtime respects) rather than a CLI feature; it crosses into
 agent-runtime territory.
 
-## Priority 2: usability gaps that workaround exists for
-
-### `declare export` (canonical token-optimized projection)
-
-**Bites:** any phase that hands a `.dx` to a fresh agent. Pasting
-raw YAML works today but is token-wasteful for large specs and
-includes content the agent shouldn't reason over (comments,
-non-canonical whitespace).
-
-**Source of truth:** the stub at
-[`pkg/export/export.go`](pkg/export/export.go),
-[ARCHITECTURE.md §4](ARCHITECTURE.md#4-the-cli-toolchain) (listed
-as a stub), and
-[Gap 3](docs/journeys/port-to-another-language.md#gap-3--no-declare-export-medium-priority)
-in the port journey.
-
 ## Priority 3: polish
-
-### `declare fmt`
-
-**Bites:** review noise. `declare diff` papers over formatting
-differences semantically, but a canonical format would still cut
-text-diff noise at the line level.
-
-**Source of truth:** the stub in
-[`cmd/declare/main.go`](cmd/declare/main.go),
-[ARCHITECTURE.md §4](ARCHITECTURE.md#4-the-cli-toolchain),
-[Gap 5](docs/journeys/port-to-another-language.md#gap-5--no-declare-fmt-low-priority)
-in the port journey.
 
 ### `declare contracts list`
 
@@ -74,7 +46,7 @@ in the port journey.
 than separately.
 
 **Source of truth:**
-[Gap 4](docs/journeys/port-to-another-language.md#gap-4--no-declare-contracts-list-low-priority)
+[Gap 3](docs/journeys/port-to-another-language.md#gap-3--no-declare-contracts-list-low-priority)
 in the port journey.
 
 ## Spec-level future directions

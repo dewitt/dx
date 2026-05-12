@@ -38,9 +38,9 @@ The `declare` binary contains **no LLM**. It is a blindingly fast, deterministic
 The v0.1.0 command set, with implementation status:
 
 *   `declare lint` (implemented): Enforces SPEC §2 (no anchors/aliases, no folded scalars, no custom tags, scalar leaves under `invariants`/`assumptions`/`unconstrained`) and SPEC §3 (required-key presence). Walks the retained YAML node graph for the physical-rule checks; strict-decodes the AST for the structural-decode pass.
+*   `declare fmt` (implemented): Reformats a `.dx` file to its canonical representation: top-level keys in SPEC §2 order, alphabetized maps, literal block scalars for multi-line strings, no trailing whitespace. Idempotent (`fmt(fmt(x)) == fmt(x)`) and AST-preserving. Prints to stdout by default; `--write` overwrites in place.
 *   `declare diff` (implemented): Parses two `.dx` files and outputs a semantic ledger of operations (`[ADDED]`, `[REMOVED]`, `[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`, `[RENAMED]`), rather than a noisy text diff.
-*   `declare fmt` (stub): Will format the `.dx` file to a canonical representation.
-*   `declare export` (stub): Will compile the `.dx` file into a tightly packed, token-optimized format for ingestion by agent context windows, stripping human comments and standardizing structure.
+*   `declare export` (implemented): Emits the AST as canonical YAML (default) or compact JSON, with comments stripped, for ingestion by agent context windows. Byte-stable for the same AST so two agents can agree on hashes.
 *   `declare verify` (deferred to v0.2 per SPEC §4): Will run the `contracts:` block as a black-box test harness. Until it ships, contract execution is performed by an agent under the [`judge`](skills/judge/SKILL.md) skill.
 
 See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md) for invocation details, exit codes, and the post-merge ritual.

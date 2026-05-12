@@ -16,13 +16,13 @@ command and how to interpret its output.
 
 ## 1. Command Inventory
 
-| Command          | Status         | Purpose                                                 |
-| ---------------- | -------------- | ------------------------------------------------------- |
-| `declare lint`   | implemented    | Validate `.dx` files against SPEC structural rules.     |
-| `declare fmt`    | stub           | Canonicalize formatting (whitespace, key order).        |
-| `declare diff`   | implemented    | Emit a semantic ledger between two `.dx` files.         |
-| `declare export` | stub           | Emit the AST in an agent-optimized format (e.g. JSON).  |
-| `declare verify` | deferred to v0.2 | Run the `contracts:` block as a black-box test harness. |
+| Command          | Status           | Purpose                                                       |
+| ---------------- | ---------------- | ------------------------------------------------------------- |
+| `declare lint`   | implemented      | Validate `.dx` files against SPEC structural rules.           |
+| `declare fmt`    | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
+| `declare diff`   | implemented      | Emit a semantic ledger between two `.dx` files.               |
+| `declare export` | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
+| `declare verify` | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
 
 The current binary lives at `./cmd/declare`. Build with `go build ./...`.
 For one-off invocations during development, prefer:
@@ -161,18 +161,60 @@ Fix it (acting as `architect`) before running any other tool.
 
 ## 3. `declare fmt`
 
-Currently a stub: prints `fmt: not yet implemented` and exits 0. Do not
-treat the absence of changes as confirmation of canonical form.
+### Invocation
 
-When implemented, the contract will be:
+```bash
+declare fmt <file> [<file> ...]            # writes canonical output to stdout
+declare fmt --write <file> [<file> ...]    # overwrites each input in place
+declare fmt -w <file> [<file> ...]         # short form
+```
 
-- Idempotent: `fmt(fmt(x)) == fmt(x)`.
-- Order-normalizing: top-level keys reordered to SPEC §2 canonical order.
-- Whitespace-normalizing: literal-scalar bodies preserved byte-for-byte;
-  surrounding whitespace canonicalized.
+`declare fmt` accepts only filesystem paths (not git-revision specs):
+the `--write` semantics on a git revision would be nonsensical.
 
-Until then, hand-edit to canonical order and rely on `declare lint` for
-structural checks.
+### What canonical means
+
+- Top-level keys appear in SPEC §2 order (`system`, `intent`,
+  `invariants`, `assumptions`, `contracts`, `unconstrained`).
+- Map entries inside `invariants:`, `assumptions:`, `contracts:`,
+  and `unconstrained:` are sorted alphabetically by key.
+- `intent.secondary` list order is preserved (lists are semantic).
+- Multi-line strings use the literal block scalar (`|`); single-line
+  strings use plain or double-quoted form per yaml.v3's defaults.
+- Trailing whitespace is stripped from every line; the file ends
+  with exactly one newline.
+- Empty `invariants:` / `assumptions:` are emitted as `{}` (the
+  SPEC §3 zero-state).
+- Empty optional blocks (`contracts:`, `unconstrained:`) are
+  omitted entirely.
+
+### Properties
+
+- **Idempotent.** `fmt(fmt(x))` is byte-identical to `fmt(x)`.
+- **AST-preserving.** `fmt(x)` decodes to the same AST as `x`.
+- **Lint-safe.** `fmt(x)` always lints cleanly if `x` did.
+- **Refuses invalid input.** A file with lint errors is not
+  formatted; `fmt` reports the lint issues and exits non-zero.
+
+### What gets preserved across formatting
+
+- Top-level head comments (e.g., a comment above `system:`).
+
+### What does NOT get preserved (known limitation)
+
+- Comments inside `invariants:`, `assumptions:`, `contracts:`, and
+  `unconstrained:` map entries. Preserving them across formatting
+  requires content-keyed identity, which is brittle when entries
+  are renamed or reordered. If you have load-bearing prose that
+  needs to survive `fmt`, put it in a top-level head comment or in
+  the leaf body itself.
+
+### Exit codes
+
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| 0    | All inputs formatted successfully (and written, if `-w`).        |
+| 1    | At least one input had lint errors, or `-w` write failed.        |
 
 ## 4. `declare diff`
 
@@ -225,16 +267,57 @@ the semantic ledger is built for it.
 
 ## 5. `declare export`
 
-Currently a stub: prints `Error: export: not yet implemented` and exits 1.
+### Invocation
 
-Eventual purpose: emit a token-optimized projection of the AST (default
-format: compact JSON) for ingestion into another agent's context window.
-Comments stripped, keys ordered, whitespace minimized.
+```bash
+declare export <source>                    # canonical YAML to stdout (default)
+declare export -f yaml <source>            # explicit YAML
+declare export -f json <source>            # compact one-line JSON
+```
 
-When you need to hand a `.dx` to a downstream agent today, paste the raw
-file. Do not synthesize a JSON form by hand — the canonical projection
-needs to come from a deterministic source so two agents can agree on
-hashes.
+`<source>` may be a filesystem path or a git revision spec (see
+[§1a "Source resolution"](#git-revision-sources)).
+
+### YAML format
+
+The output of `declare fmt`, **with all comments stripped**. This is
+the form to hand to a fresh agent: byte-stable for the same AST,
+free of editorial chatter, and densely packed in the YAML idioms
+LLMs handle natively.
+
+Two agents that export the same `.dx` will produce byte-identical
+output, so they can agree on a content hash without coordinating.
+
+### JSON format
+
+A compact one-line JSON projection of the AST. Best for non-LLM
+consumers (other tools, structured-input sub-agents, automated
+checks):
+
+```json
+{"system":"hello-world","intent":{"primary":"...","secondary":["..."]},...}
+```
+
+Properties:
+
+- Object keys are emitted in declaration order at the top level
+  (system, intent, invariants, assumptions, contracts,
+  unconstrained), matching SPEC §2.
+- Map keys inside each block are sorted alphabetically.
+- HTML-escaping is disabled (`<`, `>`, `&` appear literally rather
+  than as `\u003c` etc.) for token efficiency.
+- Output ends with exactly one newline.
+- Required `invariants:` / `assumptions:` always appear as `{}`
+  when empty (preserves the SPEC §3 zero-state); empty optional
+  blocks are omitted.
+
+### When to use which
+
+| Situation                                          | Format  |
+| -------------------------------------------------- | ------- |
+| Handing the spec to a coding agent or LLM         | `yaml`  |
+| Piping into `jq` / a tool / a non-LLM consumer    | `json`  |
+| Computing a content hash to coordinate two agents | either, but pick one and stick with it |
 
 ## 5a. `declare verify` (deferred to v0.2)
 

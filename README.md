@@ -8,9 +8,9 @@ imperative implementation. In a world where AI writes the code,
 maintain control over the **intent** and **constraints** of a system
 without being mired in the syntax of any particular implementation.
 
-> **Status:** v0.1.0 development. The CLI lints and diffs `.dx` files
-> today; `fmt` and `export` are deliberate stubs and `verify` is
-> deferred to v0.2 (see [SPEC.md](SPEC.md) §4 for the rationale).
+> **Status:** v0.1.0 development. The CLI lints, formats, diffs, and
+> exports `.dx` files today; `verify` is deferred to v0.2 (see
+> [SPEC.md](SPEC.md) §4 for the rationale).
 
 ## Why declare exists
 
@@ -151,8 +151,9 @@ consult before authoring, see
 ├── pkg/
 │   ├── ast/                # In-memory representation of a .dx declaration.
 │   ├── lint/               # SPEC §2 + §3 enforcement.
+│   ├── canonical/          # Deterministic AST -> YAML serializer (used by fmt + export).
 │   ├── diff/               # Semantic ledger between two declarations.
-│   └── export/             # Token-optimized AST projection (stub).
+│   └── export/             # Canonical YAML / compact JSON projections.
 ├── skills/
 │   ├── declare-orchestrator/   # Meta router; load this first.
 │   ├── dx-authoring/           # Spec reference for writing .dx files.
@@ -175,9 +176,9 @@ consult before authoring, see
 | Command          | Status             | Purpose                                                       |
 | ---------------- | ------------------ | ------------------------------------------------------------- |
 | `declare lint`   | implemented        | Validate `.dx` files against SPEC §2 and §3.                  |
+| `declare fmt`    | implemented        | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
 | `declare diff`   | implemented        | Emit a semantic ledger of operations between two `.dx` files. |
-| `declare fmt`    | stub               | Canonicalize `.dx` formatting.                                |
-| `declare export` | stub               | Emit the AST in an agent-optimized format (e.g. JSON).        |
+| `declare export` | implemented        | Emit the AST as canonical YAML (default) or compact JSON.     |
 | `declare verify` | deferred to v0.2   | Run the `contracts:` block as a black-box test harness.       |
 
 See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md)

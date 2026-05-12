@@ -1,33 +1,183 @@
-// Package export emits a parsed `.dx` declaration in agent-optimized formats.
+// Package export emits a parsed `.dx` declaration in agent-optimized
+// formats.
 //
-// This is a stub. The first real implementation will provide a tightly packed
-// JSON projection of the AST (see ARCHITECTURE.md §4) with comments stripped
-// and key ordering canonicalized for stable LLM context-window ingestion.
+// Two formats ship today:
+//
+//   - FormatYAML (default) — canonical YAML per pkg/canonical, with
+//     all human comments stripped. The form a fresh agent should
+//     consume: byte-stable for the same AST so two agents can agree
+//     on hashes, idempotent under repeated export, and free of
+//     editorial chatter that would otherwise distract LLM attention.
+//
+//   - FormatJSON — compact one-line JSON projection of the AST. The
+//     form to feed to non-LLM consumers (other tools, sub-agents
+//     that prefer structured input). Map iteration order is
+//     stabilized via canonical key sorting so output is also
+//     byte-stable.
+//
+// Comments are always stripped on export by design (see SPEC §1 and
+// the genesis design discussion). If you want to round-trip a `.dx`
+// file with comments preserved, use `declare fmt` instead, which
+// shares the same canonicalizer but retains top-level head comments.
 package export
 
 import (
-	"errors"
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
+	"sort"
 
 	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/declare/pkg/canonical"
 )
 
 // Format names a target serialization for `declare export`.
 type Format string
 
 const (
+	// FormatYAML emits canonical YAML with comments stripped.
+	FormatYAML Format = "yaml"
 	// FormatJSON emits a compact JSON projection of the AST.
 	FormatJSON Format = "json"
 )
 
-// ErrNotImplemented signals that the export pipeline has not yet been wired
-// up. The CLI surfaces this verbatim so users see a clear stub indicator
-// rather than a silent no-op.
-var ErrNotImplemented = errors.New("export: not yet implemented")
+// Write serializes d in the requested format and writes the result
+// to w. The output ends with a single newline regardless of format.
+func Write(w io.Writer, d *ast.Declaration, format Format) error {
+	if d == nil {
+		return fmt.Errorf("export: nil declaration")
+	}
 
-// Write serializes d in the requested format. It currently returns
-// ErrNotImplemented for every format; callers should treat any nil error
-// as a future contract.
-func Write(_ io.Writer, _ *ast.Declaration, _ Format) error {
-	return ErrNotImplemented
+	switch format {
+	case "", FormatYAML:
+		out, err := canonical.Marshal(d, canonical.Options{
+			StripComments: true,
+		})
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(out)
+		return err
+
+	case FormatJSON:
+		// We marshal a stable, ordered projection by hand rather
+		// than relying on encoding/json's map iteration (which is
+		// nondeterministic across runs of the same process).
+		payload := projectForJSON(d)
+		// We bypass json.Marshal in favor of an Encoder configured
+		// with SetEscapeHTML(false): the export consumer is an
+		// agent or tool, never an HTML page, and the default
+		// `<` -> `\u003c` escaping is just noise that bloats
+		// tokens. Encoder.Encode appends a trailing newline for us.
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if err := enc.Encode(payload); err != nil {
+			return fmt.Errorf("export: json marshal: %w", err)
+		}
+		_, err := w.Write(buf.Bytes())
+		return err
+
+	default:
+		return fmt.Errorf("export: unknown format %q (want one of: yaml, json)", format)
+	}
+}
+
+// projectForJSON builds a deterministic JSON-ready projection of d.
+// We use ordered slices for the top-level structure (so block order
+// is stable) and sorted map projections for invariants/assumptions/
+// contracts/unconstrained (so key order is stable). Empty optional
+// blocks are omitted.
+//
+// The shape mirrors the .dx file as closely as JSON allows:
+//
+//	{
+//	  "system": "...",
+//	  "intent": { "primary": "...", "secondary": [...] },
+//	  "invariants": { "id": "body", ... },
+//	  "assumptions": { "id": "body", ... },
+//	  "contracts": { "name": { "given": "...", "when": "...", "then": "..." } },
+//	  "unconstrained": { "category": "description", ... }
+//	}
+//
+// Map values are written via map[string]string / map[string]contract
+// which in encoding/json sort keys alphabetically. We rely on that
+// behavior (Go's encoding/json does sort map keys), which is stable
+// since Go 1.12.
+func projectForJSON(d *ast.Declaration) any {
+	type intentJSON struct {
+		Primary   string   `json:"primary,omitempty"`
+		Secondary []string `json:"secondary,omitempty"`
+	}
+	type contractJSON struct {
+		Given string `json:"given,omitempty"`
+		When  string `json:"when,omitempty"`
+		Then  string `json:"then,omitempty"`
+	}
+
+	// Use an ordered slice of [key, value] pairs at the top level so
+	// the SPEC §2 block order is preserved. encoding/json doesn't
+	// natively support ordered objects; the standard workaround is
+	// json.RawMessage assembly, but for a fixed six-key schema a
+	// custom marshaler is overkill. We rely on the fact that
+	// encoding/json marshals struct fields in declaration order.
+
+	type rootJSON struct {
+		System        string                  `json:"system,omitempty"`
+		Intent        *intentJSON             `json:"intent,omitempty"`
+		Invariants    map[string]string       `json:"invariants"`
+		Assumptions   map[string]string       `json:"assumptions"`
+		Contracts     map[string]contractJSON `json:"contracts,omitempty"`
+		Unconstrained map[string]string       `json:"unconstrained,omitempty"`
+	}
+
+	root := rootJSON{
+		System:      d.System,
+		Invariants:  ensureMap(d.Invariants),
+		Assumptions: ensureMap(d.Assumptions),
+	}
+
+	if d.Intent.Primary != "" || len(d.Intent.Secondary) > 0 {
+		root.Intent = &intentJSON{
+			Primary:   d.Intent.Primary,
+			Secondary: d.Intent.Secondary,
+		}
+	}
+
+	if len(d.Contracts) > 0 {
+		root.Contracts = make(map[string]contractJSON, len(d.Contracts))
+		// Sorting here is belt-and-suspenders; encoding/json sorts
+		// map keys, but doing it explicitly documents the intent.
+		names := make([]string, 0, len(d.Contracts))
+		for k := range d.Contracts {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			c := d.Contracts[n]
+			root.Contracts[n] = contractJSON{
+				Given: c.Given,
+				When:  c.When,
+				Then:  c.Then,
+			}
+		}
+	}
+
+	if len(d.Unconstrained) > 0 {
+		root.Unconstrained = ensureMap(d.Unconstrained)
+	}
+
+	return root
+}
+
+// ensureMap returns m if non-nil, or an empty map. We materialize
+// invariants and assumptions as `{}` rather than `null` in JSON
+// because SPEC §3 treats the empty-map state as semantically
+// distinct from "absent."
+func ensureMap(m map[string]string) map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
+	return m
 }

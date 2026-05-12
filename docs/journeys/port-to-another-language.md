@@ -318,22 +318,7 @@ At maximum, a sandboxing primitive — though that crosses into the
 agent-runtime layer, which is explicitly out of scope for the
 `declare` binary itself.
 
-### Gap 3 — No `declare export` (medium priority)
-
-**Where it bites:** every phase, when handing the spec to a fresh
-agent.
-
-**Symptom:** for large `.dx` files (many contracts, many invariants,
-heavy comments), pasting the raw file into a context window is
-token-wasteful and includes content (comments, non-canonical
-whitespace) the agent shouldn't be reasoning over.
-
-**What's needed:** `declare export system.dx --format=canonical`
-emitting a token-optimized projection that strips comments,
-canonicalizes ordering, and produces a stable hash. The export
-format is a stub today.
-
-### Gap 4 — No `declare contracts list` (low priority)
+### Gap 3 — No `declare contracts list` (low priority)
 
 **Where it bites:** step 5 (Judge phase) at scale.
 
@@ -343,19 +328,6 @@ contract names, then walk each. Easy to miss one.
 **What's needed:** a small command that emits one contract identifier
 per line, suitable for piping into a runner. (Falls out naturally
 from `declare verify` if/when that ships.)
-
-### Gap 5 — No `declare fmt` (low priority)
-
-**Where it bites:** the architect's review loop and any merge.
-
-**Symptom:** the archaeologist agent's YAML formatting differs from
-what the architect would have written; subsequent edits produce
-text-diff noise even when the semantic change is small. `declare
-diff` papers over this for review purposes, but a canonical format
-would still cut review noise at the line level.
-
-**What's needed:** `declare fmt --in-place system.dx` producing
-byte-identical output for semantically identical inputs.
 
 ## Worked example
 

@@ -8,7 +8,7 @@ To maintain a deterministic Abstract Syntax Tree (AST) and prevent semantic drif
 *   **No Anchors/Aliases:** The use of `&` (anchors) and `*` (aliases) is strictly forbidden.
 *   **No Complex Tags:** Custom YAML tags (e.g., `!!binary`, `!!set`) are not supported.
 *   **Literal Scalars Only:** All multiline strings must use the literal block scalar (`|`). The folded scalar (`>`) is prohibited due to ambiguous whitespace handling in diverse LLM tokenizers.
-*   **Root Key Ordering:** While YAML is unordered, agents should prefer the order: `system`, `intent`, `invariants`, `assumptions`, `contracts`, `unconstrained`.
+*   **Root Key Ordering:** While YAML is unordered, agents should prefer the order: `system`, `intent`, `invariants`, `assumptions`, `contracts`, `unconstrained`. The `declare fmt` command enforces this ordering, sorts entries within `invariants` / `assumptions` / `contracts` / `unconstrained` alphabetically, and produces a byte-stable canonical form. `declare export` produces the same form with comments stripped.
 
 ## 3. Schema Definitions
 

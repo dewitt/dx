@@ -5,11 +5,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/dewitt/declare/pkg/canonical"
 	"github.com/dewitt/declare/pkg/diff"
 	"github.com/dewitt/declare/pkg/export"
 	"github.com/dewitt/declare/pkg/lint"
@@ -130,15 +132,84 @@ func newLintCmd() *cobra.Command {
 }
 
 func newFmtCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "fmt [file...]",
+	var write bool
+	c := &cobra.Command{
+		Use:   "fmt <file> [file ...]",
 		Short: "Canonicalize the formatting of .dx files",
-		Args:  cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Fprintln(cmd.ErrOrStderr(), "fmt: not yet implemented")
+		Long: "Reformats one or more .dx files into the canonical " +
+			"form mandated by SPEC §2: top-level keys in canonical " +
+			"order; map entries inside invariants/assumptions/" +
+			"contracts/unconstrained sorted alphabetically; literal " +
+			"block scalars (`|`) for any multi-line string; trailing " +
+			"whitespace stripped; exactly one trailing newline.\n\n" +
+			"By default, prints the formatted output to stdout " +
+			"without modifying the input -- safe for piping into " +
+			"`diff` or another tool. Pass --write (-w) to overwrite " +
+			"the input file in place. Idempotent: " +
+			"`fmt(fmt(x)) == fmt(x)` byte-for-byte.\n\n" +
+			"Top-level head comments are preserved; comments inside " +
+			"invariants/assumptions/contracts/unconstrained entries " +
+			"are NOT preserved across formatting (a known limitation).",
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// fmt deliberately accepts only filesystem paths, not
+			// git-revision specs: the --write semantics on a git
+			// revision are nonsensical, and the stdout path would
+			// just be `git show <rev>:<path> | declare fmt -` if
+			// we grew stdin support, which we haven't.
+			var failed bool
+			for _, path := range args {
+				out, err := formatFile(path)
+				if err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", path, err)
+					failed = true
+					continue
+				}
+				if write {
+					if err := os.WriteFile(path, out, 0o644); err != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", path, err)
+						failed = true
+						continue
+					}
+				} else {
+					_, _ = cmd.OutOrStdout().Write(out)
+				}
+			}
+			if failed {
+				return fmt.Errorf("fmt failed")
+			}
 			return nil
 		},
 	}
+	c.Flags().BoolVarP(&write, "write", "w", false,
+		"overwrite each input file in place instead of writing to stdout")
+	return c
+}
+
+// formatFile reads the named file, lints it (refusing to format an
+// invalid spec -- formatting a broken file would silently change its
+// shape and likely make the diagnosis harder), and returns the
+// canonicalized bytes.
+func formatFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	res := lint.Lint(path, data)
+	if !res.OK() {
+		// Surface the issues to stderr-of-the-process here would
+		// duplicate them across multi-file calls; let the caller
+		// report a single combined error.
+		var buf bytes.Buffer
+		for _, i := range res.Issues {
+			fmt.Fprintln(&buf, i)
+		}
+		return nil, fmt.Errorf("refusing to format file with lint issues:\n%s", buf.String())
+	}
+	return canonical.Marshal(res.Declaration, canonical.Options{
+		StripComments: false,
+		SourceNode:    res.Declaration.Node,
+	})
 }
 
 func newExportCmd() *cobra.Command {
@@ -146,7 +217,15 @@ func newExportCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "export <source>",
 		Short: "Emit the AST in an agent-optimized format",
-		Args:  cobra.ExactArgs(1),
+		Long: "Emits a canonical projection of the .dx file suitable " +
+			"for ingestion by another agent. Comments are stripped; " +
+			"top-level keys appear in SPEC §2 canonical order; map " +
+			"entries are sorted alphabetically. The output is " +
+			"byte-stable for the same AST -- two agents can hash the " +
+			"export and compare.\n\n" +
+			"Source may be a filesystem path or a git revision spec " +
+			"(see `declare diff --help`).",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			res, err := lint.LintSource(args[0])
 			if err != nil {
@@ -164,6 +243,7 @@ func newExportCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVarP(&format, "format", "f", string(export.FormatJSON), "output format (json)")
+	c.Flags().StringVarP(&format, "format", "f", string(export.FormatYAML),
+		"output format (yaml or json)")
 	return c
 }
