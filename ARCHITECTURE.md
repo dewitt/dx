@@ -35,11 +35,18 @@ The `declare` ecosystem is designed to be operated by a swarm of specialized age
 
 The `declare` binary contains **no LLM**. It is a blindingly fast, deterministic toolchain built to enforce the `.dx` specification.
 
-*   `declare lint`: Enforces the strict YAML subset and structural rules.
-*   `declare fmt`: Formats the `.dx` file to a canonical representation.
-*   `declare diff`: Parses two `.dx` files and outputs a semantic ledger of operations (e.g., `[PROMOTED] assumptions.x -> invariants.y`), rather than a noisy text diff.
-*   `declare export`: Compiles the `.dx` file into a tightly packed, token-optimized format for ingestion by agent context windows, stripping human comments and standardizing structure.
+The v0.1.0 command set, with implementation status:
+
+*   `declare lint` (implemented): Enforces SPEC §2 (no anchors/aliases, no folded scalars, no custom tags, scalar leaves under `invariants`/`assumptions`/`unconstrained`) and SPEC §3 (required-key presence). Walks the retained YAML node graph for the physical-rule checks; strict-decodes the AST for the structural-decode pass.
+*   `declare diff` (implemented): Parses two `.dx` files and outputs a semantic ledger of operations (`[ADDED]`, `[REMOVED]`, `[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`, `[RENAMED]`), rather than a noisy text diff.
+*   `declare fmt` (stub): Will format the `.dx` file to a canonical representation.
+*   `declare export` (stub): Will compile the `.dx` file into a tightly packed, token-optimized format for ingestion by agent context windows, stripping human comments and standardizing structure.
+*   `declare verify` (deferred to v0.2 per SPEC §4): Will run the `contracts:` block as a black-box test harness. Until it ships, contract execution is performed by an agent under the [`judge`](skills/judge/SKILL.md) skill.
+
+See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md) for invocation details, exit codes, and the post-merge ritual.
 
 ## 5. Security & Safety
 
-Agents modify `.dx` files directly, but rely on `declare lint` in their event loop to catch structural entropy. Semantic conflicts are resolved through the `declare diff` tool and explicit `reason` fields within the `.dx` invariants, creating an auditable ledger of architectural decisions.
+Agents modify `.dx` files directly, but rely on `declare lint` in their event loop to catch structural entropy. Semantic conflicts are resolved through the `declare diff` tool, which produces a deterministic ledger of how the spec evolved between two revisions.
+
+The auditable design-decision ledger envisioned for the long term — where each invariant carries a `reason:`, an `author:`, and a `since:` field — is reserved as a future-compatibility shape in SPEC §6 but is **not** yet expressible in v0.1.0 (where leaves under `invariants:` / `assumptions:` / `unconstrained:` are scalar strings). Today, the audit trail lives in git: the commit that introduced an invariant is its provenance, and `declare diff` is the lens for reading the change.

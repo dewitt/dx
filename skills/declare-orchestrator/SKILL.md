@@ -102,8 +102,8 @@ defect.
 ### 4d. Semantic Communication (AGENTS.md §5)
 
 When summarizing changes for a human, summarize changes to **intent and
-invariants**, not to lines of code. Use `declare diff` (when implemented)
-rather than text diffs.
+invariants**, not to lines of code. Use `declare diff <before>.dx
+<after>.dx` rather than text diffs.
 
 ## 5. Handoff Protocol
 
