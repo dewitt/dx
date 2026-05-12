@@ -1,0 +1,19 @@
+# Built binary (matches the module name when built at the repo root).
+/declare
+
+# Go build & test artifacts.
+*.test
+*.out
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+coverage.out
+
+# Editor & OS cruft.
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
