@@ -1,4 +1,4 @@
-# weather-cli — the canonical worked example
+# weather-cli — the canonical working example
 
 This directory is the round-trip demonstration that motivated the
 `declare` design discussion. It exercises every block of the `.dx`
