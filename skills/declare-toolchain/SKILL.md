@@ -20,8 +20,9 @@ command and how to interpret its output.
 | ---------------- | -------------- | ------------------------------------------------------- |
 | `declare lint`   | implemented    | Validate `.dx` files against SPEC structural rules.     |
 | `declare fmt`    | stub           | Canonicalize formatting (whitespace, key order).        |
-| `declare diff`   | not yet built  | Emit a semantic ledger between two `.dx` files.         |
+| `declare diff`   | implemented    | Emit a semantic ledger between two `.dx` files.         |
 | `declare export` | stub           | Emit the AST in an agent-optimized format (e.g. JSON).  |
+| `declare verify` | deferred to v0.2 | Run the `contracts:` block as a black-box test harness. |
 
 The current binary lives at `./cmd/declare`. Build with `go build ./...`.
 For one-off invocations during development, prefer:
@@ -49,24 +50,33 @@ Accepts one or more `.dx` files. Reports each file's status to stdout
 | 0    | All input files passed lint.                                   |
 | 1    | At least one file had a structural issue, or I/O failed.       |
 
-### What it currently checks
+### What it checks
 
-- Strict YAML decode into the AST (`KnownFields(true)`): unknown top-level
-  fields fail.
-- Required-key presence: `system`, `intent.primary`, `invariants`,
-  `assumptions`. The `invariants` and `assumptions` checks consult the raw
-  YAML node graph, so explicitly-empty maps (`{}`) are accepted while
-  absent keys are flagged.
+- **SPEC §2 physical rules** (walked over the raw `*yaml.Node` graph):
+  - No anchors (`&name`) or aliases (`*name`).
+  - No custom or non-default YAML tags (`!!binary`, `!!set`, user
+    `!foo`, etc.).
+  - No folded block scalars (`>`); literal `|` is the only allowed
+    multi-line form.
+  - Map values under `invariants:`, `assumptions:`, and
+    `unconstrained:` must be scalar strings, not nested mappings or
+    sequences.
+- **Strict structural decode** into the AST (`KnownFields(true)`):
+  unknown top-level fields fail.
+- **Required-key presence** (SPEC §3): `system`, `intent.primary`,
+  `invariants`, `assumptions`. The `invariants` and `assumptions`
+  checks consult the raw YAML node graph, so explicitly-empty maps
+  (`{}`) are accepted while absent keys are flagged.
 
-### What it does **not yet** check (planned)
+### What it does **not yet** check
 
-- SPEC §2 physical rules: anchors/aliases, custom tags, folded scalars.
-  The AST retains `*yaml.Node` so these rules can be added without an
-  API break.
-
-If your task depends on one of those checks (e.g., you need to refuse
-folded scalars), do the inspection by hand on the YAML source and file
-the gap.
+- Slug-format validation on `system:` (SPEC §3 says "Type: String
+  (Slug format)" but doesn't define the regex). Treated as advisory
+  for v0.1.0; the architect's pruning pass should catch obvious
+  violations.
+- Category-prefix discipline on invariant IDs (also advisory; the
+  prefix convention is enforced socially via skill review, not
+  mechanically).
 
 ### When `declare lint` is mandatory
 
@@ -97,24 +107,49 @@ structural checks.
 
 ## 4. `declare diff`
 
-Not yet built. The intended contract (ARCHITECTURE.md §4):
+### Invocation
 
-```
-declare diff old.dx new.dx
-```
-
-Emits a **semantic ledger** of operations:
-
-```
-[ADDED]    invariants.perf_p99_ms
-[REMOVED]  unconstrained.storage_backend
-[PROMOTED] assumptions.cli_default → invariants.iface_cli_default
-[MUTATED]  intent.primary
+```bash
+declare diff <old>.dx <new>.dx
 ```
 
-Until it ships, when reporting `.dx` changes to a human, summarize in this
-shape **manually** rather than pasting a text diff. That is the spirit of
-AGENTS.md §5 ("Communication with Humans").
+Emits a **semantic ledger** of operations to stdout, one per line, in
+SPEC §2 canonical block order:
+
+```
+[MUTATED] intent.primary
+[PROMOTED] assumptions.cache.location -> invariants.iface_cache_path
+[ADDED] unconstrained.language
+```
+
+### Operation taxonomy
+
+| Op           | Meaning                                                                              |
+| ------------ | ------------------------------------------------------------------------------------ |
+| `[ADDED]`    | A path exists in `<new>` but not in `<old>`.                                         |
+| `[REMOVED]`  | A path exists in `<old>` but not in `<new>`.                                         |
+| `[MUTATED]`  | Same path on both sides; value differs.                                              |
+| `[PROMOTED]` | Same body, moved toward `invariants` (more committed). E.g., `assumptions.x → invariants.x`. |
+| `[DEMOTED]`  | Same body, moved away from `invariants` (less committed). E.g., `invariants.x → unconstrained.x`. |
+| `[RENAMED]`  | Same body, same block, different key.                                                |
+
+### Exit codes
+
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| 0    | Diff completed (whether or not changes were found).              |
+| 1    | One of the inputs failed to decode; the file path is reported.   |
+
+The diff command does **not** require either input to lint cleanly; an
+architect may legitimately diff a known-broken spec against its fix.
+It does require both files to decode into a `Declaration`.
+
+### When to use it (vs. text diff)
+
+Always, when communicating spec changes to a human or another agent.
+This is the canonical mechanism for AGENTS.md §5 ("Communication with
+Humans"): a text diff over YAML is hostile to architectural review;
+the semantic ledger is built for it.
 
 ## 5. `declare export`
 
@@ -128,6 +163,23 @@ When you need to hand a `.dx` to a downstream agent today, paste the raw
 file. Do not synthesize a JSON form by hand — the canonical projection
 needs to come from a deterministic source so two agents can agree on
 hashes.
+
+## 5a. `declare verify` (deferred to v0.2)
+
+There is no `declare verify` command in v0.1.0. SPEC §4 explains why:
+contract execution is intentionally human/agent-driven for the first
+release, performed by an agent operating under the `judge` skill.
+
+If you find yourself wanting to write `declare verify`, instead:
+
+1. Load the `judge` skill.
+2. Walk every entry in `contracts:` by hand (or via your agent
+   runtime's tool-use), setting up `given`, triggering `when`,
+   evaluating `then`.
+3. Classify any failure per the judge's failure-classification rules.
+
+A future `declare verify` will automate steps 1–3 against a strict
+contract grammar; until that ships, the judge skill is the contract.
 
 ## 6. The Verification Loop (canonical sequence)
 
@@ -150,6 +202,26 @@ spec and the implementation.
 Skipping step 1 or step 4 is the failure mode `declare` exists to
 prevent. Do not skip them under time pressure.
 
+## 6a. Post-Merge Ritual
+
+When a `.dx` file is touched on multiple branches and merged, the
+architect MUST run, in order:
+
+1. `declare lint <merged>.dx` — a textual three-way merge can produce
+   structurally invalid YAML (duplicate keys, broken indentation).
+2. `declare diff <merge-base>.dx <merged>.dx` — surfaces every
+   semantic operation introduced by the merge in one glance. A clean
+   text-merge can still hide a semantic conflict (e.g., one branch
+   demoted an invariant to `unconstrained:` while the other tightened
+   it).
+3. Reconcile any conflict in the **spec**, not the implementation.
+   Per AGENTS.md §1 the `.dx` file leads.
+
+This is the v0.1.0 stance per SPEC §5. A future revision may introduce
+`declare merge` for AST-level structural merge; until then, the
+architect runs the ritual manually after every merge that touches a
+`.dx` file.
+
 ## 7. CI Snippet (reference)
 
 A minimal GitHub-Actions-style block, illustrative only:
@@ -169,13 +241,16 @@ broken `find` mask a real lint failure.
 
 ## 8. Common Failure Modes
 
-| Symptom                                                       | Likely cause                                                  | Fix                                                  |
-| ------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| `field <x> not found in type ast.Declaration`                 | Top-level typo or unknown key.                                | Remove or rename to a SPEC §3 key.                   |
-| `missing required key …`                                      | Structural omission.                                          | Add the key (use `{}` for empty maps).               |
-| Lint passes but a contract fails immediately on a clean impl. | Contract `then` references internal state, not output.        | Rewrite the contract (architect's job).              |
-| `declare export` exits 1 with `not yet implemented`.          | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
-| Lint silently passes a file with `>` folded scalars.          | Physical-checks not yet wired up.                             | Manually grep for `: >` and fail the task.           |
+| Symptom                                                                         | Likely cause                                                  | Fix                                                  |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| `field <x> not found in type ast.Declaration`                                   | Top-level typo or unknown key.                                | Remove or rename to a SPEC §3 key.                   |
+| `missing required key …`                                                        | Structural omission.                                          | Add the key (use `{}` for empty maps).               |
+| `folded block scalar `>` forbidden by SPEC §2`                                  | Used `>` instead of `\|` for a multiline string.              | Replace `>` with `\|`.                               |
+| `anchor &x forbidden by SPEC §2` / `alias node forbidden by SPEC §2`            | Used `&` / `*` to share content between blocks.               | Inline the content; SPEC §2 forbids hidden state.    |
+| `explicit YAML tag "X" forbidden by SPEC §2`                                    | Used a custom tag like `!!binary` or `!foo`.                  | Remove the tag; encode the data as a normal string.  |
+| `invariants.X must be a scalar string`                                          | Tried to give an invariant a structured body (e.g., `rule:`/`reason:`). | Flatten to a single literal scalar (v0.1.0); see SPEC §6 for the v0.2 audit-trail proposal. |
+| Lint passes but a contract fails immediately on a clean impl.                   | Contract `then` references internal state, not output.        | Rewrite the contract (architect's job).              |
+| `declare export` exits 1 with `not yet implemented`.                            | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
 
 ## 9. Anti-Patterns
 

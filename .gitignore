@@ -17,3 +17,7 @@ coverage.out
 .vscode/
 *.swp
 *~
+
+# Local-only background material (e.g. exported chat transcripts that
+# inform the design but are not part of the project's public artifact).
+/docs/origins/

@@ -44,6 +44,7 @@ Pick exactly one role per task. Load its skill and follow it strictly.
 | "Verify the implementation against the contracts."                       | `judge`                |
 | "Run the contracts. Tell me which ones fail and why."                    | `judge`                |
 | Pure CLI usage (`declare lint`, `fmt`, `diff`, `export`)                 | `declare-toolchain`    |
+| Reconciling a `.dx` merge (lint then diff against merge base)            | `declare-toolchain` §6a + `architect` |
 | Spec questions ("Is folded scalar allowed?", "What goes in `intent`?")   | `dx-authoring`         |
 
 If the task spans multiple roles (common), execute them **sequentially**:

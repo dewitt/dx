@@ -22,11 +22,11 @@ If your agent does not auto-load skills, instruct it to read
 | ---------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
 | `declare-orchestrator` | Meta / router       | Always, on entering any `declare`-managed repo. Routes to the role-skills below.          |
 | `dx-authoring`         | Spec reference      | Whenever you are about to write or modify a `.dx` file.                                   |
-| `declare-toolchain`    | CLI usage           | Whenever you are about to invoke `declare lint / fmt / diff / export`.                    |
+| `declare-toolchain`    | CLI usage           | Whenever you are about to invoke `declare lint / fmt / diff / export`. Also covers the post-merge ritual (SPEC §5). |
 | `archaeologist`        | Role: extraction    | "Reverse-engineer this codebase into a `.dx` file."                                       |
 | `architect`            | Role: refinement    | "Write/refine the `.dx` file." Owns `intent`, `invariants`, `contracts`, `unconstrained`. |
 | `implementer`          | Role: coding        | "Generate the implementation from `system.dx`." May only modify `assumptions:`.           |
-| `judge`                | Role: verification  | "Verify the implementation against the contracts."                                        |
+| `judge`                | Role: verification  | "Verify the implementation against the contracts." (Until `declare verify` ships in v0.2, the judge skill *is* the contract executor.) |
 
 ## Design notes
 

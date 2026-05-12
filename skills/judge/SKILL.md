@@ -34,6 +34,14 @@ You do not:
 - Modify `assumptions:` (the implementer logs those).
 - Skip a contract because it "obviously" passes — execute every one.
 
+### v0.1.0 verification model
+
+There is no `declare verify` command in v0.1.0 (SPEC §4). The judge
+**is** the contract executor: you walk every entry in `contracts:` by
+hand or via your agent runtime's tool-use. A future `declare verify`
+will mechanize the loop you currently perform; until then, your
+walk-through is the contract.
+
 ## 2. Pre-Flight
 
 1. `declare lint <file>.dx` — must exit 0. If not, refuse the task and

@@ -126,12 +126,25 @@ the invariant's prose; do not fabricate a contract.
 
 ### 3d. Restructuring (key reordering, splitting one invariant into two)
 
-Restructuring is allowed but must preserve semantics. Use `declare diff`
-(when available) on the before/after; today, summarize the semantic
-delta in your handoff.
+Restructuring is allowed but must preserve semantics. Run
+`declare diff <before>.dx <after>.dx` and confirm the ledger is what
+you intended. Paste the ledger into your handoff.
 
 If you split one invariant into two, every implementer-visible
 constraint must still be implied by the new pair. Do not weaken silently.
+
+### 3e. Reconciling a merge
+
+When a `.dx` file is touched on multiple branches and merged, follow
+the post-merge ritual in `declare-toolchain` §6a:
+
+1. `declare lint` the merge result.
+2. `declare diff <merge-base> <merge-result>` to see every semantic
+   operation introduced.
+3. Reconcile any semantic conflict by editing the spec, not the
+   implementation.
+
+This is the v0.1.0 substitute for a structural merge tool (SPEC §5).
 
 ## 4. The Pruning Pass
 
