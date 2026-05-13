@@ -1,5 +1,12 @@
 # Specification: The `.dx` Language (v0.1.0)
 
+This document is the normative reference for the `.dx` language. The
+intellectual position behind it — why a separate declarative artifact,
+and why now — is in [ARCHITECTURE.md §1 (Philosophy)](ARCHITECTURE.md#1-philosophy).
+The rules below operationalize that position; reading them in
+isolation is fine, but the philosophy explains *why* they take the
+shape they do.
+
 ## 1. Physical Format
 Files must be valid YAML 1.2. The canonical file extension is `.dx`.
 
@@ -46,7 +53,7 @@ Explicitly declared degrees of freedom.
 
 Verification of an implementation against the `contracts:` block is performed by an agent operating under the `judge` skill (see `skills/judge/SKILL.md`). The judge interprets each contract's `given` / `when` / `then` clauses as prose, sets up the precondition, runs the implementation, and evaluates the observable outcome. Pass/fail classification (implementation bug vs. spec gap vs. intent mismatch) is the judge's responsibility.
 
-This deliberately defers a `declare verify` command to a future revision. The genesis design discussion (see `docs/origins/`) considered baking a contract harness into the CLI; we chose human/agent-driven verification for v0.1.0 because (a) it ships immediately and (b) it keeps the CLI strictly LLM-free per ARCHITECTURE.md §4. A `declare verify` command remains a candidate for v0.2.
+This deliberately defers a `declare verify` command to a future revision. The genesis design discussion (see `docs/origins/`) considered baking a contract harness into the CLI; we chose human/agent-driven verification for v0.1.0 because (a) it ships immediately and (b) it keeps the CLI strictly LLM-free per ARCHITECTURE.md §5. A `declare verify` command remains a candidate for v0.2.
 
 Until then, the verification loop in AGENTS.md §3 remains the single source of truth: `declare lint` is mechanical; everything downstream of it is the judge's job.
 

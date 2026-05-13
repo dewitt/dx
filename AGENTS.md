@@ -15,6 +15,15 @@ audit-trail format, and the routing table that decides which
 role-skill to load for a given task. The role-skills (one each for
 the four agents above) build on the rules below.
 
+The behavioral rules in this document follow from the project's
+philosophical position — that the `.dx` file is the *idea* of the
+system and the imperative code is a derived witness. The full
+positioning, including the prior art (Z, TLA+, OWL, Eiffel, the
+denotational-semantics tradition) and what's specifically new in
+the LLM-as-implementer paradigm, is in
+[ARCHITECTURE.md §1 (Philosophy)](ARCHITECTURE.md#1-philosophy).
+Worth reading once; everything below operationalizes it.
+
 ## 1. The Primacy of the Declaration
 The `.dx` file is the source of truth. You must never generate
 imperative code that violates a defined invariant in the `.dx` file.

@@ -84,6 +84,10 @@ when it evolves.
 > There is no LLM inside the `declare` binary. The intelligence lives
 > in the agents that consume it; the binary is the referee.
 
+The intellectual position behind this — why a separate declarative
+artifact, why this particular moment, what the prior art looks like —
+is laid out in [ARCHITECTURE.md §1 (Philosophy)](ARCHITECTURE.md#1-philosophy).
+
 ## Use it with your coding agent
 
 The interesting workflow isn't a human typing `declare lint` in a
@@ -193,7 +197,7 @@ for invocation details, exit codes, and the post-merge ritual.
 
 ```
 .
-├── ARCHITECTURE.md         # Why declare exists; the multi-agent loop.
+├── ARCHITECTURE.md         # Philosophy, operating principles, and the multi-agent loop.
 ├── SPEC.md                 # Normative .dx language definition (v0.1.0).
 ├── AGENTS.md               # Behavioral protocol for every agent in this repo.
 ├── ROADMAP.md              # Prioritized index of known gaps and v0.2 work.
@@ -213,8 +217,8 @@ making non-trivial changes:
    (human or AI) follows in this repository.
 2. [`SPEC.md`](SPEC.md) — the normative definition of the `.dx`
    language.
-3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — design rationale and the
-   multi-agent loop.
+3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — philosophy, operating
+   principles, and the multi-agent loop.
 4. The [`skills/`](skills/) directory — operational playbooks per role.
 
 Standard build / vet / test:
