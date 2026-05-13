@@ -63,31 +63,41 @@ system: hello-world
 
 ```yaml
 intent:
-  primary: |
-    One sentence stating the core observable purpose.
+  primary: One sentence stating the core observable purpose.
   secondary:
     - One supporting goal per list entry.
     - Keep these short and goal-shaped, not implementation-shaped.
 ```
 
-- `primary` is a single literal-scalar string. Required.
+- `primary` is a string scalar. Required. Keep it on one line if you
+  can; for longer rationale, use the literal block scalar (`|`).
 - `secondary` is an optional list of strings. Each entry is a goal, not a
   task. "Be fast" is fine; "use a thread pool" is not — that's
   implementation, and belongs nowhere in `.dx`.
 
 ### 3c. `invariants`
 
-A map from category-prefixed slug IDs to literal-scalar prose statements
-of non-negotiable constraints.
+A map from category-prefixed slug IDs to prose statements of
+non-negotiable constraints.
 
 ```yaml
 invariants:
-  iface_stdout: |
-    Writes a single UTF-8 line to stdout terminated by `\n`.
-  perf_startup_ms: |
-    Cold-start latency must remain under 50ms on commodity hardware.
-  sec_no_network: |
-    The implementation must not open any network sockets.
+  iface_stdout: Writes a single UTF-8 line to stdout terminated by `\n`.
+  perf_startup_ms: Cold-start latency must remain under 50ms on commodity hardware.
+  sec_no_network: The implementation must not open any network sockets.
+```
+
+Single-line invariants use plain scalars; multi-line ones use the
+literal block scalar (`|`). Both forms decode to the same value, and
+`declare fmt` chooses between them automatically — write whichever is
+natural and let the formatter canonicalize.
+
+```yaml
+invariants:
+  iface_complex_rule: |
+    A multi-line invariant uses `|`. The body is preserved verbatim,
+    line by line. Use this form when the constraint genuinely needs
+    more than one sentence to express.
 ```
 
 Conventional prefixes: `iface_`, `perf_`, `sec_`, `obs_` (observability),
@@ -127,15 +137,13 @@ Black-box verification rules in given/when/then form.
 ```yaml
 contracts:
   greets_named_user:
-    given: |
-      The argument vector contains exactly one non-empty name.
-    when: |
-      The binary is invoked.
-    then: |
-      stdout contains "Hello, <name>!\n" and the exit code is 0.
+    given: The argument vector contains exactly one non-empty name.
+    when: The binary is invoked.
+    then: stdout contains "Hello, <name>!\n" and the exit code is 0.
 ```
 
-- All three fields are literal-scalar strings.
+- All three fields are string scalars (plain on one line, `|` for
+  multi-line).
 - `then` clauses must be **observable** (stdout, exit code, file state,
   HTTP response, …). Never reference internal state.
 - One contract = one observable outcome. If you need conjunctions, prefer
@@ -147,10 +155,8 @@ A map from category to a description of the freedom granted.
 
 ```yaml
 unconstrained:
-  language: |
-    Any language with a stable POSIX runtime is acceptable.
-  storage_backend: |
-    Choose any durable key-value store; SQLite is acceptable.
+  language: Any language with a stable POSIX runtime is acceptable.
+  storage_backend: Choose any durable key-value store; SQLite is acceptable.
 ```
 
 If you find yourself wanting to write "we don't care about X," X belongs
@@ -209,38 +215,26 @@ A minimal but complete `.dx` file demonstrating every block:
 
 ```yaml
 system: hello-world
-
 intent:
-  primary: |
-    Greet a user by name on standard output.
+  primary: Greet a user by name on standard output.
   secondary:
     - Be friendly.
     - Exit cleanly.
-
 invariants:
-  iface_stdout: |
-    Writes a single UTF-8 line to stdout terminated by `\n`.
-  perf_startup_ms: |
-    Cold-start latency must remain under 50ms on commodity hardware.
-
+  iface_stdout: Writes a single UTF-8 line to stdout terminated by `\n`.
+  perf_startup_ms: Cold-start latency must remain under 50ms on commodity hardware.
 assumptions:
   greeting.format: |
     The greeting is "Hello, <name>!" — the spec does not pin the
     punctuation or word choice, and this matches the canonical
     POSIX-tutorial form.
-
 contracts:
   greets_named_user:
-    given: |
-      The argument vector contains exactly one non-empty name.
-    when: |
-      The binary is invoked.
-    then: |
-      stdout contains "Hello, <name>!\n" and the exit code is 0.
-
+    given: The argument vector contains exactly one non-empty name.
+    when: The binary is invoked.
+    then: stdout contains "Hello, <name>!\n" and the exit code is 0.
 unconstrained:
-  language: |
-    Any language with a stable POSIX runtime is acceptable.
+  language: Any language with a stable POSIX runtime is acceptable.
 ```
 
 A real example lives at `examples/hello.dx`.

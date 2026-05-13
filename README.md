@@ -20,29 +20,18 @@ plugin):
 
 ```yaml
 system: hello-world
-
 intent:
-  primary: |
-    Greet a user by name on standard output.
-
+  primary: Greet a user by name on standard output.
 invariants:
-  iface_stdout: |
-    Writes a single UTF-8 line to stdout terminated by `\n`.
-
+  iface_stdout: Writes a single UTF-8 line to stdout terminated by `\n`.
+assumptions: {}
 contracts:
   greets_named_user:
-    given: |
-      The argument vector contains exactly one non-empty name.
-    when: |
-      The binary is invoked.
-    then: |
-      stdout contains "Hello, <name>!\n" and the exit code is 0.
-
-assumptions: {}
-
+    given: The argument vector contains exactly one non-empty name.
+    when: The binary is invoked.
+    then: stdout contains "Hello, <name>!\n" and the exit code is 0.
 unconstrained:
-  language: |
-    Any language with a stable POSIX runtime is acceptable.
+  language: Any language with a stable POSIX runtime is acceptable.
 ```
 
 The `declare` CLI validates it:

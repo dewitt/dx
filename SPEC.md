@@ -77,10 +77,8 @@ In v0.1.0, `invariants:` / `assumptions:` / `unconstrained:` leaves are scalar s
 # Forward-compatible v0.2 sketch -- NOT valid v0.1.0:
 invariants:
   perf_cache_ttl:
-    rule: |
-      Cache TTL must be strictly 600 seconds.
-    reason: |
-      Upstream API documentation forbids polling faster than 10 minutes.
+    rule: Cache TTL must be strictly 600 seconds.
+    reason: Upstream API documentation forbids polling faster than 10 minutes.
     author: agent-architect@cloudcode
     since: v0.1.0
 ```

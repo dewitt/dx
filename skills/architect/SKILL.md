@@ -109,12 +109,9 @@ contract:
 ```yaml
 contracts:
   <id_describing_the_observable>:
-    given: |
-      <preconditions, in prose>
-    when: |
-      <triggering event, in prose>
-    then: |
-      <observable outcome, in prose>
+    given: <preconditions, in prose>
+    when: <triggering event, in prose>
+    then: <observable outcome, in prose>
 ```
 
 The `then` clause must reference observable state — stdout, exit code,
