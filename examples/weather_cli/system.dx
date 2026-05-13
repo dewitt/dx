@@ -61,8 +61,7 @@ contracts:
     given: |
       A valid zip code "98101" is supplied as the first argument and
       `WEATHER_API_KEY` is set to any non-empty value.
-    when: |
-      The binary is invoked with no `--json` flag.
+    when: The binary is invoked with no `--json` flag.
     then: |
       Exit code is 0 and stdout contains a single human-readable line
       that mentions the zip code and at least a temperature or
@@ -71,8 +70,7 @@ contracts:
     given: |
       A valid zip code "98101" is supplied as the first argument,
       `WEATHER_API_KEY` is set, and `--json` is passed.
-    when: |
-      The binary is invoked.
+    when: The binary is invoked.
     then: |
       Exit code is 0 and stdout is a single line of valid JSON whose
       top-level object includes a temperature and a condition description.
@@ -80,16 +78,13 @@ contracts:
     given: |
       A zip code is supplied as the first argument and the
       `WEATHER_API_KEY` environment variable is unset.
-    when: |
-      The binary is invoked.
+    when: The binary is invoked.
     then: |
       Exit code is non-zero, stderr names the missing environment
       variable, and no upstream network request was made.
   rejects_missing_zipcode:
-    given: |
-      No positional arguments are supplied and `WEATHER_API_KEY` is set.
-    when: |
-      The binary is invoked.
+    given: No positional arguments are supplied and `WEATHER_API_KEY` is set.
+    when: The binary is invoked.
     then: |
       Exit code is non-zero and stderr contains the substring "Usage" or
       a zip-code-related error message.

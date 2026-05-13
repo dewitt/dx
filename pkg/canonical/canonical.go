@@ -214,15 +214,47 @@ func sortedContractMap(m map[string]ast.Contract) *yaml.Node {
 	return n
 }
 
-// scalarString returns a scalar node carrying value. When prefer
-// LiteralIfMultiline is true and the value contains a newline, the
-// node is marked as a literal block scalar (`|`). Otherwise yaml.v3
-// chooses plain or double-quoted style automatically.
+// scalarString returns a scalar node carrying value.
+//
+// When preferLiteralIfMultiline is true and the value contains an
+// *internal* newline, the node is emitted as a literal block scalar
+// (`|`). A *trailing* newline alone does not count as multi-line:
+// it is the artifact YAML produces when a literal block is decoded
+// (e.g., `key: |\n  hello\n` decodes to "hello\n"), and round-
+// tripping a single-line string through `|` would otherwise
+// permanently lock it into block-scalar form even when the content
+// is one line. We strip a single trailing newline before checking,
+// then hand the (possibly trimmed) value to yaml.v3, which picks
+// plain or double-quoted style automatically.
+//
+// When preferLiteralIfMultiline is false (key strings, slug values,
+// etc.), the value is passed through unchanged and yaml.v3 picks
+// the style.
 func scalarString(value string, preferLiteralIfMultiline bool) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.ScalarNode, Value: value}
-	if preferLiteralIfMultiline && strings.ContainsRune(value, '\n') {
-		n.Style = yaml.LiteralStyle
+	if !preferLiteralIfMultiline {
+		return &yaml.Node{Kind: yaml.ScalarNode, Value: value}
 	}
+
+	// Treat at most one trailing newline as a YAML emit artifact, not
+	// semantic content. Anything beyond that -- internal newlines or
+	// multiple trailing newlines -- is preserved as authored.
+	body := value
+	if strings.HasSuffix(body, "\n") {
+		body = body[:len(body)-1]
+	}
+
+	n := &yaml.Node{Kind: yaml.ScalarNode, Value: value}
+	if strings.ContainsRune(body, '\n') {
+		n.Style = yaml.LiteralStyle
+		return n
+	}
+
+	// Single-line content (with at most a trailing newline). Emit the
+	// content without the trailing newline so yaml.v3 picks plain (or
+	// quoted) form, not `|`. The semantic round-trip remains clean
+	// because a plain scalar decodes back to a string with no
+	// trailing newline -- the artifact is gone in both directions.
+	n.Value = body
 	return n
 }
 

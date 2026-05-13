@@ -129,6 +129,57 @@ func TestMarshal_PlainScalarForSingleLine(t *testing.T) {
 	}
 }
 
+// A string like "one line\n" decodes from `primary: |\n  one line\n`,
+// but its only newline is the trailing artifact. The canonicalizer
+// must treat it as single-line so the round-trip emits as plain --
+// otherwise every `|`-authored single-line string stays locked in
+// block-scalar form forever. This is the regression that motivated
+// the trim-trailing-newline rule in scalarString.
+func TestMarshal_TrailingNewlineDoesNotForceLiteral(t *testing.T) {
+	d := &ast.Declaration{
+		System: "t",
+		Intent: ast.Intent{Primary: "one line\n"},
+	}
+	out, err := Marshal(d, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "primary: |") {
+		t.Errorf("single content line with trailing newline should NOT use `|`:\n%s", out)
+	}
+	if !strings.Contains(string(out), "primary: one line") {
+		t.Errorf("expected plain scalar:\n%s", out)
+	}
+}
+
+// Strings with internal newlines must still use the literal block
+// scalar regardless of whether they end with a trailing newline.
+func TestMarshal_InternalNewlineUsesLiteral(t *testing.T) {
+	cases := map[string]string{
+		"with trailing":    "line1\nline2\n",
+		"without trailing": "line1\nline2",
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			d := &ast.Declaration{
+				System: "t",
+				Intent: ast.Intent{Primary: body},
+			}
+			out, err := Marshal(d, Options{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Either `|` (clip; preserves single trailing newline) or
+			// `|-` (strip; no trailing newline) is acceptable. Both
+			// are literal block forms; what we want to reject is the
+			// plain-scalar emit that would smush the lines together.
+			if !strings.Contains(string(out), "primary: |") {
+				t.Errorf("multiline string must use literal `|` form:\n%s", out)
+			}
+		})
+	}
+}
+
 func TestMarshal_EmptyMapsAsFlow(t *testing.T) {
 	d := &ast.Declaration{
 		System:      "t",

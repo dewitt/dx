@@ -20,8 +20,10 @@ package canonical_test
 import (
 	"bytes"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/dewitt/declare/pkg/ast"
 	"github.com/dewitt/declare/pkg/canonical"
 	"github.com/dewitt/declare/pkg/lint"
 )
@@ -93,10 +95,16 @@ func TestRoundTrip_PreservesAST(t *testing.T) {
 		t.Fatal(res2.Issues)
 	}
 
-	// Compare the observable fields. We must NOT compare the
-	// embedded *yaml.Node -- that's the raw graph and will of course
-	// differ.
-	a, b := res.Declaration, res2.Declaration
+	// Compare the observable fields modulo a single trailing newline
+	// on every string value. The canonicalizer treats the trailing
+	// newline produced by `|`-style decoding as a YAML emit artifact
+	// rather than semantic content (so a single-line invariant body
+	// like "Greet a user.\n" round-trips as "Greet a user." in plain
+	// scalar form). The semantic guarantee is therefore not byte-
+	// equality of values but equality after trimming one trailing
+	// newline. The embedded *yaml.Node is naturally different and is
+	// not compared.
+	a, b := normalizeForCompare(res.Declaration), normalizeForCompare(res2.Declaration)
 	if a.System != b.System {
 		t.Errorf("System: %q -> %q", a.System, b.System)
 	}
@@ -118,6 +126,55 @@ func TestRoundTrip_PreservesAST(t *testing.T) {
 	if !reflect.DeepEqual(a.Unconstrained, b.Unconstrained) {
 		t.Errorf("Unconstrained:\nbefore: %v\nafter:  %v", a.Unconstrained, b.Unconstrained)
 	}
+}
+
+// normalizeForCompare returns a shallow copy of d with every string
+// field stripped of a single trailing newline. Used by the AST
+// round-trip test to express the semantic equivalence the
+// canonicalizer enforces -- see scalarString in canonical.go for
+// the rationale.
+func normalizeForCompare(d *ast.Declaration) *ast.Declaration {
+	trimNL := func(s string) string {
+		return strings.TrimSuffix(s, "\n")
+	}
+	out := &ast.Declaration{
+		System: trimNL(d.System),
+		Intent: ast.Intent{
+			Primary: trimNL(d.Intent.Primary),
+		},
+	}
+	for _, s := range d.Intent.Secondary {
+		out.Intent.Secondary = append(out.Intent.Secondary, trimNL(s))
+	}
+	if d.Invariants != nil {
+		out.Invariants = make(map[string]string, len(d.Invariants))
+		for k, v := range d.Invariants {
+			out.Invariants[k] = trimNL(v)
+		}
+	}
+	if d.Assumptions != nil {
+		out.Assumptions = make(map[string]string, len(d.Assumptions))
+		for k, v := range d.Assumptions {
+			out.Assumptions[k] = trimNL(v)
+		}
+	}
+	if d.Contracts != nil {
+		out.Contracts = make(map[string]ast.Contract, len(d.Contracts))
+		for k, c := range d.Contracts {
+			out.Contracts[k] = ast.Contract{
+				Given: trimNL(c.Given),
+				When:  trimNL(c.When),
+				Then:  trimNL(c.Then),
+			}
+		}
+	}
+	if d.Unconstrained != nil {
+		out.Unconstrained = make(map[string]string, len(d.Unconstrained))
+		for k, v := range d.Unconstrained {
+			out.Unconstrained[k] = trimNL(v)
+		}
+	}
+	return out
 }
 
 func TestRoundTrip_Idempotent(t *testing.T) {
