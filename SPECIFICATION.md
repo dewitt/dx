@@ -784,6 +784,6 @@ invariants:
   perf_cache_ttl:
     rule: Cache TTL must be strictly 600 seconds.
     reason: Upstream API documentation forbids polling faster than 10 minutes.
-    author: agent-architect@cloudcode
+    author: agent-architect@example.org
     since: v0.1.0
 ```

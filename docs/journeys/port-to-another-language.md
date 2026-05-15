@@ -52,7 +52,7 @@ runtime:
 
 | Agent runtime         | How to install                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------ |
-| Claude Code (CLI)     | `cp -r skills/* ~/.config/cloudcode/skills/` (or use a per-project `.claude/skills/` symlink) |
+| Claude Code (CLI)     | `cp -r skills/* ~/.claude/skills/` (or use a per-project `.claude/skills/` symlink) |
 | Gemini CLI            | `for s in skills/*/; do echo "" \| gemini skills link "$s"; done` — uses the built-in `gemini skills link` command, which symlinks each skill so updates to the source are reflected immediately. |
 | Cursor                | Workspace `.cursorrules` referencing the skill files                                 |
 | Aider                 | `.aider.conf.yml` `read:` list pointing at `skills/*/SKILL.md`                       |
@@ -65,8 +65,8 @@ playbooks can use them.
 **Concrete example (Claude Code):**
 
 ```bash
-mkdir -p ~/.config/cloudcode/skills
-cp -r /tmp/dx/skills/* ~/.config/cloudcode/skills/
+mkdir -p ~/.claude/skills
+cp -r /tmp/dx/skills/* ~/.claude/skills/
 ```
 
 **Concrete example (Gemini CLI):**
@@ -95,7 +95,7 @@ they show by default. Some examples:
 
 | Runtime         | Headless invocation                                                  |
 | --------------- | -------------------------------------------------------------------- |
-| Claude Code     | `cloudcode -p "<prompt>"` (auto-approves edits in headless mode).    |
+| Claude Code     | `claude -p "<prompt>"` (auto-approves edits in headless mode).       |
 | Gemini CLI      | `gemini --yolo --skip-trust --prompt "<prompt>"` — both flags are required: `--yolo` auto-approves tool calls, **and** `--skip-trust` is needed because gemini-cli refuses YOLO mode in untrusted folders by default. Without `--skip-trust` the command exits with a trusted-folders error. |
 | Other runtimes  | Consult `<runtime> --help` for the equivalent of "auto-approve all tools" and "skip the workspace-trust prompt". The two often have to be combined explicitly. |
 
@@ -602,7 +602,7 @@ journey is done; commit nothing further.
 
 ### Other agent runtimes
 
-Claude Code's headless invocation is `cloudcode -p "<prompt>"`
+Claude Code's headless invocation is `claude -p "<prompt>"`
 with auto-approval enabled by default. Cursor and other agent
 runtimes have their own conventions. The prompts above transfer;
 the wrapper changes per runtime.

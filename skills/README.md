@@ -4,7 +4,7 @@ This directory contains the agent skills that operationalize the `dx`
 paradigm. Each subdirectory follows the Anthropic Agent Skills convention:
 a `SKILL.md` file with YAML frontmatter (`name`, `description`) followed by
 prose instructions. The format is intentionally portable across coding
-agents — Claude, Cursor, CloudCode, Gemini-based loops, etc. — so any agent
+agents — Claude Code, Cursor, Gemini CLI, and any other agent runtime that consumes Markdown skills — so any agent
 that consumes Markdown playbooks can use them directly.
 
 ## How to use
