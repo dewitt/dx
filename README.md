@@ -204,9 +204,9 @@ you're making non-trivial changes:
 1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every
    contributor (human or AI) follows in this repository.
 2. [`SPEC.md`](SPEC.md) — the language definition. Part I is the
-   philosophy and the conceptual framework; Part II is the v0.1.0
-   YAML serialization; Part III points at the reference
-   implementation that ships in this repo.
+   conceptual framework; Part II is the v0.1.0 YAML serialization.
+   The reference toolchain (this repo) is documented in this README,
+   not in the spec.
 3. The [`skills/`](skills/) directory — operational playbooks per
    role.
 

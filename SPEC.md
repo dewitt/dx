@@ -5,7 +5,7 @@ designed to hold the *idea* of a software system in a form that
 humans can review, version, and argue about — and that AI agents can
 consume, validate, and produce imperative code from.
 
-The document is organized in three parts, in deliberate order of
+The document is organized in two parts, in deliberate order of
 permanence:
 
 - **Part I — Concepts.** The philosophical position behind `.dx`,
@@ -21,16 +21,16 @@ permanence:
   This part is replaceable in a future major revision without
   changing the concepts.
 
-- **Part III — Reference Implementation.** Pointers to the toolchain,
-  skills, journeys, and worked examples that ship in this repository.
-  This part is one of many possible instantiations: it exists to
-  support readers in working with `.dx` files today, but the
-  language is independent of any particular implementation.
-
-A reader who wants only the *language* should read Part I and Part II.
-A reader who wants only the *concepts* — to evaluate, criticize, or
-re-implement them — can read Part I alone. A reader who wants to use
-`.dx` today can read Part III after Parts I and II to find the tools.
+The reference toolchain (the `dx` binary), the agent skills under
+[`skills/`](skills/), the user journeys under
+[`docs/journeys/`](docs/journeys/), and the worked examples under
+[`examples/`](examples/) are not part of this specification. They
+are one possible instantiation that ships with this repository to
+support readers in working with `.dx` files today; see
+[`README.md`](README.md). A different team could build a completely
+different toolchain or skill set, and `.dx` files written for one
+would work with the other, provided both implementations conform to
+this spec.
 
 # Part I — Concepts
 
@@ -329,9 +329,9 @@ After any merge, the Architect must:
    implementation. Per position 1 in §1, the `.dx` file leads.
 
 How the semantic delta is computed is an implementation concern
-(see Part III for the reference toolchain's `diff` command); what
-matters at the language level is that the reconciliation happens
-in the spec.
+(see [`README.md`](README.md) for the reference toolchain's `diff`
+command); what matters at the language level is that the
+reconciliation happens in the spec.
 
 Future revisions of the language may introduce a CRDT-style
 structural merge that operates over the AST directly and surfaces
@@ -410,8 +410,8 @@ enforceable structurally.
   keys in this order: `system`, `intent`, `invariants`,
   `assumptions`, `contracts`, `unconstrained`. A file that violates
   the SHOULD is structurally valid but is not in canonical form.
-  (See Part III for the reference toolchain's `fmt` command, which
-  enforces canonical form automatically.)
+  (See [`README.md`](README.md) for the reference toolchain's `fmt`
+  command, which enforces canonical form automatically.)
 
 ## 9. Schema
 
@@ -582,41 +582,3 @@ versioning scheme. A change to Part II's serialization may happen
 without changing Part I; a change to Part I's concepts is a more
 significant event and would coincide with a major release.
 
-# Part III — Reference Implementation
-
-The toolchain, skills, journeys, and worked examples that ship in
-this repository are one possible instantiation of the language
-defined in Parts I and II. They are reference material, not part
-of the language definition. A different team could build a
-completely different toolchain — in a different programming
-language, with a different command structure, targeting a
-different agent runtime — and `.dx` files written for one would
-work with the other, provided both implementations conform to
-this spec.
-
-What this repository ships:
-
-- A deterministic CLI (`dx`) implementing structural
-  validation, canonical formatting, semantic diffing, AST export,
-  and contract enumeration. The CLI contains no LLM — by design,
-  per Part I §1: the binary is the referee, not a player.
-  See [`README.md`](README.md) for the command surface and
-  [`ROADMAP.md`](ROADMAP.md) for what is shipped, what is
-  deferred, and why.
-- Seven portable agent skills under [`skills/`](skills/) that
-  teach a coding agent (Claude Code, Gemini CLI, Cursor, or any
-  agent that consumes Markdown skills) how to operate as
-  Archaeologist, Architect, Implementer, or Judge. See
-  [`skills/README.md`](skills/README.md).
-- End-to-end user journeys under [`docs/journeys/`](docs/journeys/)
-  walking through real tasks (porting a program to another
-  language, greenfield development, adding a feature, supporting
-  multiple language implementations of the same spec).
-- Worked examples under [`examples/`](examples/) — minimal
-  fixtures plus a fully-worked weather CLI demonstrating the
-  Archaeologist → Architect → Implementer → Judge loop end to end.
-
-Behavioral expectations for any agent contributing to this
-repository — independent of which toolchain or skills are loaded —
-are in [`AGENTS.md`](AGENTS.md). Those expectations follow from
-Part I of this document.
