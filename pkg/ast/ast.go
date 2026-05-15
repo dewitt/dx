@@ -5,7 +5,7 @@
 // projection of it. We retain the original *yaml.Node graph alongside the
 // decoded values so that downstream tooling (lint, fmt, diff) can inspect
 // physical YAML features that strict-mode parsing would otherwise discard --
-// most notably literal vs. folded block scalars (SPEC §2), node positions for
+// most notably literal vs. folded block scalars (SPEC §4.2), node positions for
 // diagnostics, and head/foot comments for round-trip formatting.
 package ast
 
@@ -13,7 +13,7 @@ import "gopkg.in/yaml.v3"
 
 // Declaration is the root of a parsed `.dx` file.
 //
-// Field ordering follows SPEC §2 ("Root Key Ordering") so that re-emitted
+// Field ordering follows SPEC §4.2 ("Root Key Ordering") so that re-emitted
 // canonical forms preserve the recommended agent ergonomics.
 type Declaration struct {
 	System        string              `yaml:"system"`
@@ -25,10 +25,10 @@ type Declaration struct {
 
 	// Node is the raw YAML document node retained after decoding. It is
 	// populated by the loader (see pkg/lint) and is required for physical
-	// checks the SPEC mandates -- e.g., refusing folded scalars (SPEC §2)
+	// checks the SPEC mandates -- e.g., refusing folded scalars (SPEC §4.2)
 	// or anchors/aliases.
 	//
-	// ASSUMPTION (ast.node_retention): SPEC §2 says we must reject folded
+	// ASSUMPTION (ast.node_retention): SPEC §4.2 says we must reject folded
 	// scalars and anchors. The decoded Go values discard that information,
 	// so we keep the node graph here to enable physical inspection. This
 	// is a structural choice not mandated by SPEC; documented per
@@ -37,7 +37,7 @@ type Declaration struct {
 }
 
 // Intent expresses the high-level semantic purpose of the declaration
-// (SPEC §3 / `intent`).
+// (SPEC §4.3 / `intent`).
 type Intent struct {
 	// Primary is the core objective. Required.
 	Primary string `yaml:"primary"`
@@ -45,7 +45,7 @@ type Intent struct {
 	// Secondary is an optional set of supporting objectives or
 	// non-functional goals.
 	//
-	// ASSUMPTION (ast.intent_secondary_shape): SPEC §3 describes
+	// ASSUMPTION (ast.intent_secondary_shape): SPEC §4.3 describes
 	// `secondary` as "Supporting objectives or non-functional goals"
 	// without pinning the shape. We model it as a list of strings,
 	// which is the most natural fit for a multi-item enumeration of
@@ -55,9 +55,9 @@ type Intent struct {
 	Secondary []string `yaml:"secondary,omitempty"`
 }
 
-// Contract is a single black-box verification rule (SPEC §3 / `contracts`).
+// Contract is a single black-box verification rule (SPEC §4.3 / `contracts`).
 //
-// ASSUMPTION (ast.contract_field_types): SPEC §3 specifies the three
+// ASSUMPTION (ast.contract_field_types): SPEC §4.3 specifies the three
 // fields (`given`, `when`, `then`) as state/triggers/outcomes without
 // constraining their YAML shape. We model them as free-form strings to
 // preserve human-authored prose (typically literal block scalars). A

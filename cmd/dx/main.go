@@ -1,8 +1,7 @@
-// Command dx is the CLI entry point for the `.dx` toolchain.
-//
-// It contains no LLM logic (per SPEC.md §1: the binary is the referee, not
-// a player): every subcommand is a deterministic operation over the `.dx`
-// AST.
+// Command dx is the CLI entry point for the reference `.dx` toolchain.
+// Every subcommand is a deterministic operation over the `.dx` AST. The
+// binary contains no LLM; intelligence lives in the agents that consume
+// dx files, not in the tooling that validates them.
 package main
 
 import (
@@ -113,7 +112,7 @@ func newDiffCmd() *cobra.Command {
 		Long: "Parses both sources into the AST and reports a stable, " +
 			"machine-parseable list of operations that describe how the " +
 			"declaration's intent and constraints changed (per " +
-			"SPEC.md §6 and AGENTS.md §5). Use this -- not text " +
+			"SPEC.md §3.9 and AGENTS.md §5). Use this -- not text " +
 			"diff -- to communicate spec changes to a human or another " +
 			"agent.\n\n" +
 			"Each source may be either a filesystem path or a git " +
@@ -165,10 +164,10 @@ func newLintCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "lint [source...]",
 		Short: "Validate one or more .dx sources against the SPEC",
-		Long: "Validates each source against SPEC §2 (physical rules) " +
-			"and §3 (required keys). Each source may be a filesystem " +
-			"path or a git revision spec of the form <rev>:<path> " +
-			"(see `dx diff --help` for examples).",
+		Long: "Validates each source against SPEC §4.2 (structural " +
+			"constraints) and §4.3 (required keys). Each source may be " +
+			"a filesystem path or a git revision spec of the form " +
+			"<rev>:<path> (see `dx diff --help` for examples).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var failed bool
@@ -202,7 +201,7 @@ func newFmtCmd() *cobra.Command {
 		Use:   "fmt <file> [file ...]",
 		Short: "Canonicalize the formatting of .dx files",
 		Long: "Reformats one or more .dx files into the canonical " +
-			"form mandated by SPEC §2: top-level keys in canonical " +
+			"form mandated by SPEC §4.2: top-level keys in canonical " +
 			"order; map entries inside invariants/assumptions/" +
 			"contracts/unconstrained sorted alphabetically; literal " +
 			"block scalars (`|`) for any multi-line string; trailing " +
@@ -284,7 +283,7 @@ func newExportCmd() *cobra.Command {
 		Short: "Emit the AST in an agent-optimized format",
 		Long: "Emits a canonical projection of the .dx file suitable " +
 			"for ingestion by another agent. Comments are stripped; " +
-			"top-level keys appear in SPEC §2 canonical order; map " +
+			"top-level keys appear in SPEC §4.2 canonical order; map " +
 			"entries are sorted alphabetically. The output is " +
 			"byte-stable for the same AST -- two agents can hash the " +
 			"export and compare.\n\n" +

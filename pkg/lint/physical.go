@@ -6,9 +6,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Physical-rule walkers for SPEC §2.
+// Physical-rule walkers for SPEC §4.2.
 //
-// SPEC §2 forbids several YAML features that are valid YAML 1.2 but
+// SPEC §4.2 forbids several YAML features that are valid YAML 1.2 but
 // degrade the determinism of the AST or the parsing reliability of LLM
 // tokenizers. The strict decoder we run in lint.go cannot catch them --
 // they are properties of the source representation, not of the decoded
@@ -17,7 +17,7 @@ import (
 // Each helper appends Issues with positional information so an editor
 // or CI can surface the exact offending line and column.
 
-// validatePhysical walks root and returns one Issue per SPEC §2 violation.
+// validatePhysical walks root and returns one Issue per SPEC §4.2 violation.
 // It is safe to call before strict-decoding succeeds; in fact, anchors
 // and aliases must be flagged here because the decoder would silently
 // follow them and the structural error messages would be confusing.
@@ -42,9 +42,9 @@ func (v *physicalVisitor) walk(n *yaml.Node) {
 
 	switch n.Kind {
 	case yaml.AliasNode:
-		// SPEC §2: "The use of `&` (anchors) and `*` (aliases) is
+		// SPEC §4.2: "The use of `&` (anchors) and `*` (aliases) is
 		// strictly forbidden."
-		v.add(n, "alias node forbidden by SPEC §2 (no anchors/aliases)")
+		v.add(n, "alias node forbidden by SPEC §4.2 (no anchors/aliases)")
 		// Do not recurse into n.Alias: the target lives elsewhere in
 		// the tree and will be visited there if it is reachable.
 		return
@@ -67,11 +67,11 @@ func (v *physicalVisitor) walk(n *yaml.Node) {
 
 func (v *physicalVisitor) checkAnchor(n *yaml.Node) {
 	if n.Anchor != "" {
-		// SPEC §2: anchors are forbidden because they introduce
+		// SPEC §4.2: anchors are forbidden because they introduce
 		// hidden state that breaks the LLM's local reasoning over the
 		// document.
 		v.add(n, fmt.Sprintf(
-			"anchor `&%s` forbidden by SPEC §2 (no anchors/aliases)",
+			"anchor `&%s` forbidden by SPEC §4.2 (no anchors/aliases)",
 			n.Anchor,
 		))
 	}
@@ -88,7 +88,7 @@ func (v *physicalVisitor) checkTag(n *yaml.Node) {
 		return
 	}
 	v.add(n, fmt.Sprintf(
-		"explicit YAML tag %q forbidden by SPEC §2 (no custom tags)",
+		"explicit YAML tag %q forbidden by SPEC §4.2 (no custom tags)",
 		n.Tag,
 	))
 }
@@ -101,13 +101,13 @@ func (v *physicalVisitor) checkContainerTag(n *yaml.Node) {
 		return
 	}
 	v.add(n, fmt.Sprintf(
-		"explicit YAML tag %q forbidden by SPEC §2 (no custom tags)",
+		"explicit YAML tag %q forbidden by SPEC §4.2 (no custom tags)",
 		n.Tag,
 	))
 }
 
 // isAllowedScalarTag mirrors the set of implicit tags YAML 1.2 produces
-// during default scalar resolution. SPEC §2 forbids any *custom* tag --
+// during default scalar resolution. SPEC §4.2 forbids any *custom* tag --
 // e.g., `!!binary`, `!!set`, or any user-defined `!foo` -- but allows
 // the implicit core-schema tags that yaml.v3 will synthesize even when
 // the source had no tag at all.
@@ -135,12 +135,12 @@ func isAllowedContainerTag(tag string) bool {
 
 // checkScalarStyle rejects folded block scalars (`>`).
 //
-// SPEC §2: "All multiline strings must use the literal block scalar (|).
+// SPEC §4.2: "All multiline strings must use the literal block scalar (|).
 // The folded scalar (>) is prohibited due to ambiguous whitespace
 // handling in diverse LLM tokenizers."
 func (v *physicalVisitor) checkScalarStyle(n *yaml.Node) {
 	if n.Style&yaml.FoldedStyle != 0 {
-		v.add(n, "folded block scalar `>` forbidden by SPEC §2 (use literal `|`)")
+		v.add(n, "folded block scalar `>` forbidden by SPEC §4.2 (use literal `|`)")
 	}
 }
 
@@ -153,7 +153,7 @@ func (v *physicalVisitor) add(n *yaml.Node, msg string) {
 	})
 }
 
-// validateLeafTypes enforces SPEC §3 leaf-type constraints that the
+// validateLeafTypes enforces SPEC §4.3 leaf-type constraints that the
 // strict Go decoder cannot express directly: in particular,
 // `invariants:`, `assumptions:`, and `unconstrained:` must map IDs to
 // scalar strings, not to nested mappings or sequences.
@@ -195,7 +195,7 @@ func validateScalarStringMap(path, blockName string, n *yaml.Node) []Issue {
 				Line:   valueNode.Line,
 				Column: valueNode.Column,
 				Message: fmt.Sprintf(
-					"`%s.%s` must be a scalar string per SPEC §3; got a %s",
+					"`%s.%s` must be a scalar string per SPEC §4.3; got a %s",
 					blockName, n.Content[i].Value, kindName(valueNode.Kind),
 				),
 			})

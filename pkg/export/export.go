@@ -15,9 +15,11 @@
 //     stabilized via canonical key sorting so output is also
 //     byte-stable.
 //
-// Comments are always stripped on export by design (see SPEC §1 and
-// the genesis design discussion). If you want to round-trip a `.dx`
-// file with comments preserved, use `dx fmt` instead, which
+// Comments are always stripped on export by design: the export form
+// is intended for downstream agent consumption, not for human reading,
+// and editorial commentary distracts agent attention without adding
+// information the AST already carries. If you want to round-trip a
+// `.dx` file with comments preserved, use `dx fmt` instead, which
 // shares the same canonicalizer but retains top-level head comments.
 package export
 
@@ -117,7 +119,7 @@ func projectForJSON(d *ast.Declaration) any {
 	}
 
 	// Use an ordered slice of [key, value] pairs at the top level so
-	// the SPEC §2 block order is preserved. encoding/json doesn't
+	// the SPEC §4.2 block order is preserved. encoding/json doesn't
 	// natively support ordered objects; the standard workaround is
 	// json.RawMessage assembly, but for a fixed six-key schema a
 	// custom marshaler is overkill. We rely on the fact that
@@ -173,7 +175,7 @@ func projectForJSON(d *ast.Declaration) any {
 
 // ensureMap returns m if non-nil, or an empty map. We materialize
 // invariants and assumptions as `{}` rather than `null` in JSON
-// because SPEC §3 treats the empty-map state as semantically
+// because SPEC §4.3 treats the empty-map state as semantically
 // distinct from "absent."
 func ensureMap(m map[string]string) map[string]string {
 	if m == nil {

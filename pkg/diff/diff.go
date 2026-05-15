@@ -4,8 +4,8 @@
 // A textual diff over the raw YAML is structurally hostile to review --
 // reordering keys, reflowing literal scalars, or changing comment
 // placement all explode into noisy red/green even when the spec did not
-// change. SPEC.md §6 calls instead for an *AST diff* that
-// reports operations against the schema:
+// change. SPEC.md §3.9 (Spec Evolution) defines a *semantic delta*
+// over the schema as the right unit of change reporting:
 //
 //	[ADDED]    invariants.perf_p99_ms
 //	[REMOVED]  unconstrained.storage_backend
@@ -71,7 +71,7 @@ func (c Change) String() string {
 //
 // The return order is stable: changes are grouped first by the schema
 // block they affect (`system`, `intent`, `invariants`, `assumptions`,
-// `contracts`, `unconstrained`) in SPEC §2 canonical order, and then
+// `contracts`, `unconstrained`) in SPEC §4.2 canonical order, and then
 // alphabetically by path within each block. This determinism matters
 // for diffs-of-diffs in code review.
 func Diff(oldDecl, newDecl *ast.Declaration) []Change {
@@ -280,7 +280,7 @@ func topBlock(path string) string {
 	return path
 }
 
-// blockOrder gives the SPEC §2 canonical sort order for top-level
+// blockOrder gives the SPEC §4.2 canonical sort order for top-level
 // blocks; unknown blocks sort last.
 func blockOrder(path string) int {
 	switch topBlock(path) {

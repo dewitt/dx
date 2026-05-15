@@ -22,7 +22,7 @@ If your agent does not auto-load skills, instruct it to read
 | ---------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
 | `dx-orchestrator` | Meta / router       | Always, on entering any `dx`-managed repo. Routes to the role-skills below.          |
 | `dx-authoring`         | Spec reference      | Whenever you are about to write or modify a `.dx` file.                                   |
-| `dx-toolchain`    | CLI usage           | Whenever you are about to invoke `dx lint / fmt / diff / export`. Also covers the post-merge ritual (SPEC §5). |
+| `dx-toolchain`    | CLI usage           | Whenever you are about to invoke `dx lint / fmt / diff / export`. Also covers the post-merge ritual (SPEC §3.9). |
 | `archaeologist`        | Role: extraction    | "Reverse-engineer this codebase into a `.dx` file."                                       |
 | `architect`            | Role: refinement    | "Write/refine the `.dx` file." Owns `intent`, `invariants`, `contracts`, `unconstrained`. |
 | `implementer`          | Role: coding        | "Generate the implementation from `system.dx`." May only modify `assumptions:`.           |

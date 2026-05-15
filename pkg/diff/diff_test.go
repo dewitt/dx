@@ -92,7 +92,7 @@ func TestDiff_RenameWithinSameBlock(t *testing.T) {
 }
 
 func TestDiff_DeterministicOrdering(t *testing.T) {
-	// Block order should follow SPEC §2 (system, intent, invariants,
+	// Block order should follow SPEC §4.2 (system, intent, invariants,
 	// assumptions, contracts, unconstrained).
 	old := &ast.Declaration{}
 	new_ := &ast.Declaration{

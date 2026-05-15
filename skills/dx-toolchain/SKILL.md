@@ -122,7 +122,7 @@ diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
 
 ### What it checks
 
-- **SPEC §2 physical rules** (walked over the raw `*yaml.Node` graph):
+- **SPEC §4.2 physical rules** (walked over the raw `*yaml.Node` graph):
   - No anchors (`&name`) or aliases (`*name`).
   - No custom or non-default YAML tags (`!!binary`, `!!set`, user
     `!foo`, etc.).
@@ -133,14 +133,14 @@ diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
     sequences.
 - **Strict structural decode** into the AST (`KnownFields(true)`):
   unknown top-level fields fail.
-- **Required-key presence** (SPEC §3): `system`, `intent.primary`,
+- **Required-key presence** (SPEC §4.3): `system`, `intent.primary`,
   `invariants`, `assumptions`. The `invariants` and `assumptions`
   checks consult the raw YAML node graph, so explicitly-empty maps
   (`{}`) are accepted while absent keys are flagged.
 
 ### What it does **not yet** check
 
-- Slug-format validation on `system:` (SPEC §3 says "Type: String
+- Slug-format validation on `system:` (SPEC §4.3 says "Type: String
   (Slug format)" but doesn't define the regex). Treated as advisory
   for v0.1.0; the architect's pruning pass should catch obvious
   violations.
@@ -175,7 +175,7 @@ the `--write` semantics on a git revision would be nonsensical.
 
 ### What canonical means
 
-- Top-level keys appear in SPEC §2 order (`system`, `intent`,
+- Top-level keys appear in SPEC §4.2 order (`system`, `intent`,
   `invariants`, `assumptions`, `contracts`, `unconstrained`).
 - Map entries inside `invariants:`, `assumptions:`, `contracts:`,
   and `unconstrained:` are sorted alphabetically by key.
@@ -185,7 +185,7 @@ the `--write` semantics on a git revision would be nonsensical.
 - Trailing whitespace is stripped from every line; the file ends
   with exactly one newline.
 - Empty `invariants:` / `assumptions:` are emitted as `{}` (the
-  SPEC §3 zero-state).
+  SPEC §4.3 zero-state).
 - Empty optional blocks (`contracts:`, `unconstrained:`) are
   omitted entirely.
 
@@ -229,7 +229,7 @@ Both `<old>` and `<new>` may be filesystem paths or git revision
 specs (see [§1a "Source resolution"](#git-revision-sources)).
 
 Emits a **semantic ledger** of operations to stdout, one per line, in
-SPEC §2 canonical block order:
+SPEC §4.2 canonical block order:
 
 ```
 [MUTATED] intent.primary
@@ -303,13 +303,13 @@ Properties:
 
 - Object keys are emitted in declaration order at the top level
   (system, intent, invariants, assumptions, contracts,
-  unconstrained), matching SPEC §2.
+  unconstrained), matching SPEC §4.2.
 - Map keys inside each block are sorted alphabetically.
 - HTML-escaping is disabled (`<`, `>`, `&` appear literally rather
   than as `\u003c` etc.) for token efficiency.
 - Output ends with exactly one newline.
 - Required `invariants:` / `assumptions:` always appear as `{}`
-  when empty (preserves the SPEC §3 zero-state); empty optional
+  when empty (preserves the SPEC §4.3 zero-state); empty optional
   blocks are omitted.
 
 ### When to use which
@@ -375,7 +375,7 @@ parent command and inheriting the same alphabetical ordering.
 
 ## 5b. `dx verify` (deferred to v0.2)
 
-There is no `dx verify` command in v0.1.0. SPEC §4 explains why:
+There is no `dx verify` command in v0.1.0. SPEC §3.8 explains why:
 contract execution is intentionally human/agent-driven for the first
 release, performed by an agent operating under the `judge` skill.
 
@@ -429,7 +429,7 @@ architect MUST run, in order:
 3. Reconcile any conflict in the **spec**, not the implementation.
    Per AGENTS.md §1 the `.dx` file leads.
 
-This is the v0.1.0 stance per SPEC §5. A future revision may introduce
+This is the v0.1.0 stance per SPEC §3.9. A future revision may introduce
 `dx merge` for AST-level structural merge; until then, the
 architect runs the ritual manually after every merge that touches a
 `.dx` file.
@@ -455,12 +455,12 @@ broken `find` mask a real lint failure.
 
 | Symptom                                                                         | Likely cause                                                  | Fix                                                  |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| `field <x> not found in type ast.Declaration`                                   | Top-level typo or unknown key.                                | Remove or rename to a SPEC §3 key.                   |
+| `field <x> not found in type ast.Declaration`                                   | Top-level typo or unknown key.                                | Remove or rename to a  SPEC §4.3 key.                   |
 | `missing required key …`                                                        | Structural omission.                                          | Add the key (use `{}` for empty maps).               |
-| `folded block scalar `>` forbidden by SPEC §2`                                  | Used `>` instead of `\|` for a multiline string.              | Replace `>` with `\|`.                               |
-| `anchor &x forbidden by SPEC §2` / `alias node forbidden by SPEC §2`            | Used `&` / `*` to share content between blocks.               | Inline the content; SPEC §2 forbids hidden state.    |
-| `explicit YAML tag "X" forbidden by SPEC §2`                                    | Used a custom tag like `!!binary` or `!foo`.                  | Remove the tag; encode the data as a normal string.  |
-| `invariants.X must be a scalar string`                                          | Tried to give an invariant a structured body (e.g., `rule:`/`reason:`). | Flatten to a single literal scalar (v0.1.0); see SPEC §6 for the v0.2 audit-trail proposal. |
+| `folded block scalar `>` forbidden by SPEC §4.2`                                  | Used `>` instead of `\|` for a multiline string.              | Replace `>` with `\|`.                               |
+| `anchor &x forbidden by SPEC §4.2` / `alias node forbidden by SPEC §4.2`            | Used `&` / `*` to share content between blocks.               | Inline the content; SPEC §4.2 forbids hidden state.    |
+| `explicit YAML tag "X" forbidden by SPEC §4.2`                                    | Used a custom tag like `!!binary` or `!foo`.                  | Remove the tag; encode the data as a normal string.  |
+| `invariants.X must be a scalar string`                                          | Tried to give an invariant a structured body (e.g., `rule:`/`reason:`). | Flatten to a single literal scalar (v0.1.0); see SPEC §4.4 for the v0.2 audit-trail proposal. |
 | Lint passes but a contract fails immediately on a clean impl.                   | Contract `then` references internal state, not output.        | Rewrite the contract (architect's job).              |
 | `dx export` exits 1 with `not yet implemented`.                            | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
 
@@ -473,4 +473,4 @@ broken `find` mask a real lint failure.
   agents. Wait for `dx export`, or paste the raw file.
 - **Shelling out to `yq`/`jq` to mutate `.dx` files.** Mutate via the
   `architect` skill and re-lint; ad-hoc YAML editing tools don't enforce
-  SPEC §2 physical rules.
+  SPEC §4.2 physical rules.

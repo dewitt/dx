@@ -3,7 +3,7 @@
 //
 // The canonical form has these properties:
 //
-//  1. Top-level keys appear in the SPEC §2 canonical order:
+//  1. Top-level keys appear in the SPEC §4.2 canonical order:
 //     system, intent, invariants, assumptions, contracts, unconstrained.
 //  2. Map entries inside invariants, assumptions, contracts, and
 //     unconstrained are sorted alphabetically by key.
@@ -86,7 +86,7 @@ func Marshal(d *ast.Declaration, opts Options) ([]byte, error) {
 }
 
 // buildRoot constructs a fresh document node containing the top-level
-// mapping in SPEC §2 canonical order. Optional blocks are emitted only
+// mapping in SPEC §4.2 canonical order. Optional blocks are emitted only
 // when they have content.
 func buildRoot(d *ast.Declaration, opts Options) *yaml.Node {
 	doc := &yaml.Node{Kind: yaml.DocumentNode}
@@ -152,7 +152,7 @@ func buildRoot(d *ast.Declaration, opts Options) *yaml.Node {
 
 // sortedStringMap returns a mapping node with keys sorted
 // alphabetically. Empty input produces a flow-style empty map ({}) so
-// the SPEC §3 zero-state is preserved verbatim.
+// the SPEC §4.3 zero-state is preserved verbatim.
 func sortedStringMap(m map[string]string) *yaml.Node {
 	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	if len(m) == 0 {

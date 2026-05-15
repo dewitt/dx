@@ -312,7 +312,7 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and prompt:
 
 **Operational note (current gap):** there is no `dx verify`
 command in v0.1.0 (deferred to v0.2 per
-[SPEC §4](../../SPEC.md#4-verification-model)). The judge **is** the
+[SPEC §3.8](../../SPEC.md#38-conformance)). The judge **is** the
 contract executor today: an agent walks each contract by hand or via
 its tool-use. This works fine for a handful of contracts; it does
 not scale to dozens. The biggest priority gap in this journey is
@@ -378,7 +378,7 @@ command that:
 
 This requires designing a contract grammar that's expressive enough
 for real-world preconditions but constrained enough to stay
-language-agnostic. SPEC §4 explicitly defers this to v0.2.
+language-agnostic. SPEC §3.8 explicitly defers this to v0.2.
 
 ### Gap 2 — No mechanism to enforce "implementer must not read the source" (medium priority)
 

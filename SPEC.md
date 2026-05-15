@@ -1,549 +1,704 @@
-# Specification: The `.dx` Language
-
-This document defines `.dx`, a declarative specification language
-designed to hold the *idea* of a software system in a form that
-humans can review, version, and argue about — and that AI agents can
-consume, validate, and produce imperative code from.
-
-The document is organized in two parts, in deliberate order of
-permanence:
-
-- **Part I — Concepts.** The philosophical position behind `.dx`,
-  the operating principles that follow from it, the conceptual
-  definitions of each block, and the workflow within which `.dx`
-  files are authored, evolved, and verified. This part is universal:
-  it would be true even if no toolchain or serialization existed.
-
-- **Part II — Serialization (v0.1.0).** The concrete YAML 1.2 subset
-  used to write `.dx` files in this version of the spec. The
-  physical-format rules, the structural constraints, the schema for
-  each block, the reserved field set, and the versioning policy.
-  This part is replaceable in a future major revision without
-  changing the concepts.
-
-The reference toolchain (the `dx` binary), the agent skills under
-[`skills/`](skills/), the user journeys under
-[`docs/journeys/`](docs/journeys/), and the worked examples under
-[`examples/`](examples/) are not part of this specification. They
-are one possible instantiation that ships with this repository to
-support readers in working with `.dx` files today; see
-[`README.md`](README.md). A different team could build a completely
-different toolchain or skill set, and `.dx` files written for one
-would work with the other, provided both implementations conform to
-this spec.
-
-# Part I — Concepts
-
-## 1. Philosophy
-
-A program is two things at once: an artifact (the source code, in
-some particular language) and an idea (what the system is supposed
-to *be*). For most of computing history the two have been fused.
-The idea exists only as it is encoded in the artifact; reading the
-idea means reading the code. When the artifact changes, the idea
-changes — and there is no separate place where the idea lives that
-can be checked, versioned, reviewed, or argued about.
-
-The intellectual position behind `.dx` is that this fusion is now
-optional. In a world where AI writes the imperative artifact, the
-*idea* of the system is the load-bearing thing humans should attend
-to, and the artifact is a derived witness — one of many possible
-implementations, all equally valid if they satisfy the idea.
-
-A `.dx` file is meant to be that idea, written down. It does not
-specify *how* the system computes anything; it specifies *what is
-true* about the system's observable behavior. The implementation is
-a witness that those truths hold. Two witnesses, in different
-languages, both honest, are equivalent.
-
-This is an old idea given new traction. **Formal-methods languages**
-(Z, VDM, TLA+, B, Alloy) have made this same separation since the
-1970s — designed for human formal proof, never widely adopted because
-authoring them is expensive and verifying them requires expert
-reviewers. **Knowledge-representation languages** (KIF, OWL, Cyc)
-attempted a similar move for AI consumers — they failed for the
-inverse reason: humans couldn't agree on shared semantics, and
-pre-LLM machines couldn't reason fast enough to make the cost
-worthwhile. **Design-by-contract** (Eiffel, JML, Code Contracts)
-embedded the idea inside imperative languages as annotations — it
-gained adherents but never became the primary artifact.
-**Denotational semantics** (Strachey, Scott) provided the
-philosophical foundation — meaning before mechanism — but kept the
-meaning in the heads of theorists rather than version-control
-systems.
-
-Each of these traditions had the right insight and the wrong era.
-They lacked a *consumer* that could draft, validate, and act on a
-declarative specification at scale. The arrival of LLM-mediated
-coding workflows changes both sides of that equation: drafting
-becomes a conversation with an agent, consuming becomes a tool-use
-loop, and the cost calculus inverts.
-
-`.dx` is the minimum-viable declarative intermediate language for
-this new operating context. It is not a successor to TLA+ or Z or
-OWL; it inherits from all of them. What it adds is a *delivery
-mechanism* — the agent that consumes the spec and produces (or
-modifies, or verifies) the implementation — that none of the prior
-traditions could assume. The spec is the source of truth; the agent
-is the engine; the imperative code is downstream of both.
-
-A few honest claims this position commits us to:
-
-1. **The `.dx` file is primary.** When the spec and the code
-   disagree, the spec wins. If a constraint is impossible to
-   satisfy, the spec changes — not the code.
-2. **Implementations are plural and replaceable.** A `.dx` should
-   never name a language, library, or framework. If two
-   implementations in two languages both satisfy every contract,
-   both are correct, and the question of which is "real" is
-   malformed.
-3. **Heuristic leaps are first-class artifacts.** When an agent
-   must guess, the guess is recorded in `assumptions:` *before*
-   the code is written. Silent invention is the failure mode the
-   entire system is designed to prevent.
-4. **Verification is observational.** A contract describes what an
-   outside observer would see, not what the code does internally.
-   This is the discipline that lets implementations diverge
-   stylistically while remaining equivalent semantically.
-
-What we are *not* claiming:
-
-- That `.dx` files are formal proofs. They are not — `.dx` does not
-  imply a model checker or a theorem prover. Verification is
-  performed by an agent walking each contract; future revisions of
-  the language may add expressive forms that admit mechanical
-  verification for the contracts that support it.
-- That the spec language is final. v0.1.0 is deliberately minimal;
-  whole categories of expression (temporal logic, refinement
-  relations, cross-system contracts) are absent and will land or be
-  rejected as the workflow's needs become clearer.
-- That AI-mediated specification will replace human design. The
-  opposite: it makes human design *more* central by giving humans a
-  place to do design that isn't immediately swamped by syntax
-  decisions.
-
-This positioning is the language's intellectual moat. Everything
-that follows in Parts I and II operationalizes it; the philosophy is
-what makes the operational choices coherent.
-
-## 2. Operating Principles
-
-The philosophy in §1 is realized through three operating principles
-that govern every concrete choice in the language and the workflow:
-
-- **Decoupling.** The `.dx` file defines the *what* and the
-  *constraints*. The generated imperative code defines the *how*.
-  Neither side is permitted to invade the other.
-- **Orthogonality.** The specification must never leak imperative
-  logic or dictate internal architecture (e.g., unit tests, library
-  choice, threading model). It focuses purely on observable system
-  state and the constraints that bind it.
-- **Formalized hallucination.** Agents are required to explicitly
-  declare heuristic leaps in an `assumptions:` block, turning silent
-  hallucinations into auditable, promotable workflow state.
-
-## 3. The Six Blocks
-
-A `.dx` file is organized into six top-level blocks. Each block
-exists for a specific philosophical reason; this section defines
-each conceptually. The YAML shape of each block is in Part II §9;
-this part is concerned only with what each block *means*.
-
-### 3a. `system`
-
-A unique identifier naming the declaration. Acts as the namespace
-for this `.dx` file; a multi-spec project distinguishes its specs
-by this name. Required.
-
-### 3b. `intent`
-
-The high-level semantic purpose of the system. Operationalizes the
-"the `.dx` file is the *idea* of the system, written down" position
-in §1: a fresh implementer reading only `intent` should understand
-what the system is *for*, even if they cannot yet build it.
-
-The block has two parts: a single `primary` objective (what the
-system exists to do, in one sentence) and an optional list of
-`secondary` goals (supporting objectives or non-functional concerns).
-Required.
-
-### 3c. `invariants`
-
-Non-negotiable observable constraints that the implementation must
-satisfy. Operationalizes positions 1 (the `.dx` file is primary)
-and 4 (verification is observational) in §1: each invariant is a
-proposition about the system's externally-visible behavior that all
-valid implementations must honor.
-
-Invariants describe *what is true*, not *how to compute it*. A
-well-formed invariant never names a language, library, framework,
-or internal data structure — those are implementation choices, not
-constraints. Required (the block must exist; it may be empty if
-the system genuinely has no invariants beyond `intent`).
-
-### 3d. `assumptions`
-
-Heuristic choices an agent made because `intent` and `invariants`
-did not uniquely determine the answer. Operationalizes position 3
-(heuristic leaps as first-class artifacts) in §1: the entire
-purpose of the block is to convert silent invention into auditable,
-promotable workflow state.
-
-Each entry is a *what was decided* paired with a *why it was the
-most defensible choice given the ambiguity*. The architect later
-promotes a ratified assumption to `invariants` (we are committing
-to it), demotes one to `unconstrained` (we explicitly don't care),
-or rejects it (rewrites the spec so the assumption becomes
-unnecessary).
-
-The block is required. An empty `assumptions:` is meaningful: it
-asserts that the agent made no unrecorded heuristic choices. This
-is distinct from omitting the block, which would be a structural
-error.
-
-### 3e. `contracts`
-
-Black-box verification rules in given/when/then form.
-Operationalizes position 4 (verification is observational) in §1:
-a contract is a recipe an outside observer can run to confirm an
-invariant holds.
-
-Every clause must reference observable state — stdout, stderr,
-exit code, file system state, HTTP response, log output, and so
-on. Never internal program state. A contract that cannot be
-expressed in observable terms is a signal that the underlying
-invariant is not testable as a black box and may need rephrasing.
-
-Optional: a `.dx` file with no contracts is well-formed but loses
-the verification story that makes the spec checkable.
-
-### 3f. `unconstrained`
-
-Explicitly declared degrees of freedom. Operationalizes position 2
-(implementations are plural and replaceable) in §1: each entry says
-"this aspect of the system is *not* constrained by the spec; the
-implementer may choose freely."
-
-Without this block, every unspecified aspect is ambiguously either
-an oversight or an intentional non-constraint. This block
-disambiguates. Use it aggressively: over-specification is a defect.
-If the spec did not intend to constrain something, the choice
-belongs either in this block (named explicitly) or absent
-altogether (left to the implementer's discretion).
-
-Optional.
-
-## 4. The Multi-Agent Workflow
-
-`.dx` is designed to be operated by a workflow of specialized roles
-coordinated through the file itself. The roles are conceptual; any
-specific implementation may collapse multiple roles into one agent
-or split one role across many. What matters is the pattern.
-
-1. **The Archaeologist.** Distills existing imperative code into
-   semantic intent and observable invariants, producing a base
-   `.dx` file. Operates only when the system already exists in code
-   form; greenfield projects skip this role.
-2. **The Architect.** Owns the `.dx` file. Refines `intent`,
-   adds or prunes `invariants`, promotes ratified `assumptions`,
-   demotes overspecifications to `unconstrained`. The Architect is
-   the only role permitted to modify `intent`, `invariants`,
-   `contracts`, and `unconstrained`.
-3. **The Implementer.** Reads the `.dx` file (and only the `.dx`
-   file) and produces imperative code that satisfies every
-   invariant and contract. The Implementer is the only role
-   permitted to *append* to `assumptions:` during code generation,
-   and is forbidden from modifying any other block.
-4. **The Judge.** Executes the implementation against the
-   `contracts` block via black-box testing. Classifies any failure
-   as either an implementation bug, a spec gap, or an intent
-   mismatch, and routes it to the appropriate role for correction.
-
-The roles share a strict, machine-checkable boundary on which
-blocks each may write. Only the Architect may modify the spec-
-defining blocks; the Implementer may only append to `assumptions:`;
-the Judge writes nothing. This separation is what makes the
-workflow auditable: any change to the `.dx` file can be attributed
-to a specific role acting under specific authority.
-
-When work transitions between roles, the transition is announced
-explicitly. The conventional form is a single line of the form:
-
-```
-HANDOFF: <from-role> → <to-role>: <one-sentence reason>
-```
-
-The handoff line is the workflow's audit trail. Together with the
-`.dx` file's git history, it makes every architectural decision
-traceable.
-
-## 5. Verification
-
-Verification of an implementation against the `.dx` file is the
-Judge's responsibility. The Judge interprets each contract's
-`given` / `when` / `then` clauses, sets up the precondition,
-triggers the action, and observes the outcome.
-
-Three classifications cover every failure:
-
-- **Implementation bug.** The code is wrong; the spec is right.
-  The contract's expected outcome did not occur, and the contract
-  is unambiguous, and no other invariant or contract contradicts
-  it. Route to the Implementer for correction.
-- **Spec gap.** The spec is wrong; the code is at most
-  accidentally right. The contract is ambiguous, contradicts an
-  invariant, or under-specifies the situation. Route to the
-  Architect to tighten the spec.
-- **Intent mismatch.** The contract conflicts with `intent` or
-  with another invariant. The spec contradicts itself. Route to
-  the Architect to reconcile.
-
-When in doubt between *implementation bug* and *spec gap*, default
-to *spec gap*. The cost of an incorrect *spec gap* call is one
-extra Architect/Implementer cycle; the cost of an incorrect
-*implementation bug* call is the Implementer rewriting working
-code to satisfy a broken spec.
-
-`.dx` does not require that contracts be machine-executable. A
-contract written in prose is a contract; the Judge interprets it.
-Future revisions of the language may add expressive forms that
-admit mechanical verification for the contracts that support it,
-but the language does not assume any particular execution model.
-
-## 6. Spec Evolution
-
-`.dx` files are version-controlled like source code. The language
-does not define a structural merge algorithm; concurrent edits
-resolve through whatever VCS the project uses.
-
-After any merge, the Architect must:
-
-1. Validate the merged file against this spec (Part II §8 and §9
-   define what "valid" means).
-2. Compute the *semantic* delta between the merge base and the
-   merge result. A clean text-merge can hide a semantic conflict —
-   for example, one branch demoting an invariant to `unconstrained`
-   while the other branch tightens it. The semantic delta surfaces
-   such conflicts as first-class operations against the schema.
-3. Reconcile any semantic conflict in the spec, not in the
-   implementation. Per position 1 in §1, the `.dx` file leads.
-
-How the semantic delta is computed is an implementation concern
-(see [`README.md`](README.md) for the reference toolchain's `diff`
-command); what matters at the language level is that the
-reconciliation happens in the spec.
-
-Future revisions of the language may introduce a CRDT-style
-structural merge that operates over the AST directly and surfaces
-semantic conflicts as first-class operations. The current spec
-does not require it.
-
-# Part II — Serialization (v0.1.0)
-
-This part defines the concrete YAML 1.2 subset used to write `.dx`
-files in v0.1.0. The conceptual definitions of each block are in
-Part I §3; this part is concerned only with physical format and
-schema. References from this part back to Part I are explicit
-where they matter.
-
-## 7. Physical Format
-
-A `.dx` file MUST be valid YAML 1.2 (subject to the structural
-constraints in §8). The canonical file extension is `.dx`.
-
-YAML was chosen as the substrate after considering JSON, TOML,
-HCL, and a custom DSL. The decision rests on four properties that
-matter specifically for the LLM-mediated authoring context the
-language was designed for:
+# The dx Specification Language
+
+> **Status:** Experimental. This document specifies an experimental
+> language and is not on any standards track. It is published to
+> invite review, criticism, and revision. The language and this
+> document may change incompatibly in future revisions.
+
+## Abstract
+
+The dx specification language defines a serialization-independent
+form for declaring the intent and constraints of a software system,
+intended for use by AI agents that consume the specification and
+produce conforming imperative implementations. A `.dx` file declares
+what a system is required to do in terms an outside observer can
+verify, and explicitly enumerates the heuristic choices an agent
+made on the human author's behalf so those choices can be reviewed
+and ratified. The language is descriptive of behavior, not
+prescriptive of implementation: a single specification may admit
+many valid implementations across many programming languages.
+
+This document defines the conceptual model in Section 3 and a
+concrete YAML 1.2 serialization in Section 4. Other serializations
+are permitted and may be specified in future revisions without
+changing the conceptual model.
+
+## 1. Introduction
+
+A program is two things at once: an artifact written in some
+programming language, and the idea of what that program is for. In
+conventional software development the two are fused; the idea exists
+only as encoded in the artifact. In a workflow where an AI agent
+produces the artifact from a human-supplied prompt, the absence of
+a separate, durable record of the idea becomes a defect. The agent
+fills gaps in the prompt with silent heuristic choices; subsequent
+edits drift away from the original intent; and the human reviewer
+has no place to look that is not the imperative code.
+
+The dx language addresses this by giving the idea its own artifact:
+a `.dx` file. The file is read and written by humans, consumed and
+emitted by agents, and version-controlled as the source of truth
+for what the system is required to do. The imperative code becomes
+a witness that the requirements hold; multiple equally valid
+implementations may exist for the same `.dx` file.
+
+### 1.1. Goals
+
+The dx language aims to:
+
+1. Provide a durable, version-controllable record of a system's
+   intent and constraints, separate from any implementation.
+2. Make the choices an agent makes on the human's behalf explicit
+   and reviewable, by requiring those choices to be recorded as
+   first-class artifacts before the corresponding code is written.
+3. Permit multiple implementations in different programming
+   languages from a single specification, with conformance
+   verifiable from outside the implementation.
+4. Be small enough to read end-to-end and use today, with a
+   trajectory toward greater expressive power in future revisions.
+5. Be portable across agent runtimes by avoiding any dependency
+   on the particulars of a specific tool or model.
+
+### 1.2. Non-Goals
+
+The dx language does not aim to:
+
+1. Provide formal proof that an implementation satisfies a
+   specification. The conformance check defined in Section 3.8 is
+   observational, not deductive.
+2. Replace human design judgment. The language gives humans a
+   place to record decisions; it does not make decisions.
+3. Be the only or final form of declarative specification for
+   AI-mediated software development. Future work may supersede or
+   subsume parts of this language.
+
+### 1.3. Historical Antecedents
+
+The separation of specification from implementation has a long
+history. Formal specification languages including Z [Z], VDM [VDM],
+TLA+ [TLA], B [B], and Alloy [Alloy] address the same separation
+for the purpose of human formal proof. Knowledge-representation
+languages including KIF [KIF] and OWL [OWL] address it for
+machine-consumable knowledge bases. Design-by-contract systems
+including Eiffel [Eiffel] and JML [JML] embed declarative
+constraints inside imperative languages as annotations. The
+denotational-semantics tradition [Strachey] [Scott] provides the
+mathematical framework for the underlying separation between a
+program's meaning and its mechanism.
+
+The dx language inherits the conceptual move common to all of these
+prior efforts. It differs in addressing AI-mediated software
+development specifically: the consumer of a `.dx` file is normally
+an agent, the producer of the implementation is normally an agent,
+and the mechanism by which heuristic choices are made explicit is
+designed for that workflow. See Section 7 for citations.
+
+### 1.4. Document Conventions
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in
+this document are to be interpreted as described in BCP 14
+[RFC2119] [RFC8174] when, and only when, they appear in all
+capitals, as shown here.
+
+## 2. Terminology
+
+This section defines terms used throughout the document. Terms are
+listed in dependency order: later definitions may rely on earlier
+ones.
+
+**Implementation.** A program, in some programming language,
+intended to satisfy a declaration. A single declaration may have
+zero, one, or many implementations.
+
+**Declaration.** The contents of a `.dx` file. Comprises a system
+identifier, an intent, a set of invariants, a set of assumptions,
+optionally a set of contracts, and optionally a set of
+unconstrained degrees of freedom. The declaration is the source of
+truth for what the implementation is required to do.
+
+**Observable.** A property of a running implementation that can be
+determined from outside the implementation: standard input, output,
+and error streams; exit codes; file system state; network traffic;
+and similar externally-visible effects. Internal program state,
+data structures, and call graphs are not observable in this sense.
+
+**System identifier.** A short string that names a declaration.
+Acts as the namespace for the declaration when multiple
+declarations coexist in a single project.
+
+**Intent.** A short, human-readable statement of what the system
+exists to do. Comprises a primary objective and an optional list
+of secondary objectives.
+
+**Invariant.** A non-negotiable observable property the
+implementation MUST maintain. Identified by a category-prefixed
+slug. Each invariant constrains every valid implementation.
+
+**Assumption.** A heuristic choice an agent made because the intent
+and invariants did not uniquely determine the answer. Identified
+by a slug. Each assumption pairs the choice that was made with the
+reason it was the most defensible choice given the ambiguity.
+
+**Contract.** A black-box verification rule expressed in
+given/when/then form. Each contract describes a precondition, a
+triggering action, and an observable outcome that MUST hold.
+Contracts are how invariants are checked.
+
+**Unconstrained degree of freedom.** An aspect of the system the
+declaration explicitly leaves to the discretion of whoever
+produces the implementation. Identified by a category name.
+
+**Agent.** A program, typically incorporating a large language
+model, that consumes or produces declarations and implementations.
+The dx language does not specify which agent is used or how it is
+invoked, nor does it require that one be used at all; declarations
+MAY be authored and implemented entirely by humans.
+
+**Conformance.** An implementation conforms to a declaration if
+and only if every contract in the declaration holds against that
+implementation, as defined in Section 3.8.
+
+## 3. Concepts
+
+This section defines the conceptual model of the dx language
+independent of any concrete serialization. Section 4 defines the
+v0.1.0 YAML serialization of the model defined here.
+
+### 3.1. Declarations
+
+A declaration is the unit of specification in the dx language. A
+declaration comprises six components, of which four are REQUIRED
+and two are OPTIONAL:
+
+| Component | Status |
+|---|---|
+| System identifier | REQUIRED |
+| Intent | REQUIRED |
+| Invariants | REQUIRED |
+| Assumptions | REQUIRED |
+| Contracts | OPTIONAL |
+| Unconstrained degrees of freedom | OPTIONAL |
+
+A REQUIRED component MUST be present, though some REQUIRED
+components MAY be empty (see the per-component definitions in
+Sections 3.2 through 3.7).
+
+Implementations MUST treat the declaration as the source of truth.
+When the behavior of an implementation conflicts with the
+declaration, the implementation is at fault by definition; if a
+constraint cannot be satisfied, the declaration MUST be modified
+rather than the implementation made non-conforming.
+
+### 3.2. The System Identifier
+
+A declaration MUST carry a system identifier: a short string that
+names the declaration and acts as its namespace within a project
+that contains multiple declarations.
+
+### 3.3. Intent
+
+A declaration MUST carry an intent. The intent comprises:
+
+- A REQUIRED primary objective: a short statement of what the
+  system exists to do, sufficient that a fresh reader of the intent
+  understands the system's purpose.
+- An OPTIONAL ordered list of secondary objectives: supporting
+  goals or non-functional concerns. Order is significant.
+
+The intent describes purpose, not mechanism. An intent that names
+a programming language, a library, a framework, or an internal
+implementation strategy is malformed.
+
+### 3.4. Invariants
+
+A declaration MUST carry an invariants block. The block is a
+collection of invariants, each identified by a unique category-
+prefixed slug. An invariant is an observable property the
+implementation MUST maintain.
+
+Invariants describe what is true of the implementation as observed
+from outside, not how the implementation is constructed. An
+invariant MUST NOT name a programming language, a library, a
+framework, or an internal data structure. The set of valid
+implementations of a declaration is defined as the set of programs
+for which every invariant holds.
+
+The invariants block MAY be empty. An empty invariants block
+asserts that the system has no constraints beyond its intent.
+
+Conventional category prefixes include `iface_` (interface
+behavior), `perf_` (performance), `sec_` (security), `obs_`
+(observability), `data_` (data shape and persistence), and `ux_`
+(user experience). Implementations MAY define additional prefixes
+provided they are used consistently within a single declaration.
+
+### 3.5. Assumptions
+
+A declaration MUST carry an assumptions block. The block is a
+collection of assumptions, each identified by a unique slug. An
+assumption is a heuristic choice made because the intent and
+invariants did not uniquely determine the answer.
+
+Each assumption MUST record both the choice that was made and the
+reason it was the most defensible choice given the ambiguity. An
+assumption that records only the choice is malformed; the rationale
+is not optional.
+
+When any party (human or agent) producing or modifying an
+implementation determines behavior that is not specified by the
+intent or by an invariant, that party MUST record the
+determination as an assumption before the corresponding code is
+written. Silent determination is forbidden by this specification.
+
+The assumptions block MAY be empty. An empty assumptions block
+asserts that no unrecorded heuristic choices were made in producing
+the implementation. This assertion is distinguishable from omitting
+the block, which is a structural error.
+
+Assumptions have a lifecycle. Over time, an assumption SHOULD be
+reviewed and resolved into one of three outcomes: ratified as an
+invariant (when the choice has been confirmed as a binding
+constraint), demoted to an unconstrained degree of freedom (when
+the choice is confirmed as not constraining any future
+implementation), or rejected by modifying the declaration so that
+the assumption becomes unnecessary. The dx language does not
+specify who performs this review.
+
+### 3.6. Contracts
+
+A declaration MAY carry a contracts block. The block is a
+collection of contracts, each identified by a name. A contract is
+a black-box verification rule comprising three clauses:
+
+- A `given` clause stating the precondition under which the
+  contract applies.
+- A `when` clause stating the triggering action or event.
+- A `then` clause stating the observ- A `then` clause stating the observable outcome that MUST hold
+  if the precondition was met and the trigger occurred.
+
+Every clause of every contract MUST reference observable state.
+Internal program state, intermediate computations, and
+implementation details are out of scope for contracts. A contract
+that cannot be expressed in observable terms indicates that the
+underlying invariant is not testable as a black box and SHOULD be
+rephrased.
+
+A declaration with no contracts is well-formed but loses the
+verification story that makes the declaration checkable.
+Conformance (Section 3.8) cannot be determined for an
+implementation against a declaration that contains no contracts.
+
+### 3.7. Unconstrained Degrees of Freedom
+
+A declaration MAY carry an unconstrained block. The block is a
+collection of categories, each paired with a description, that
+the declaration explicitly leaves to the discretion of whoever
+produces the implementation.
+
+Without an unconstrained block, every aspect of the system not
+specified by an invariant is ambiguously either an oversight or
+an intentional non-constraint. The unconstrained block
+disambiguates: an entry asserts that the named aspect was
+considered and intentionally left open.
+
+Common categories include `language` (which programming language
+to implement in), `internal_data_structures`, `cache_format`,
+`output_phrasing`, and `concurrency_model`. The set is open-ended
+and projects MAY define their own categories.
+
+A declaration SHOULD use the unconstrained block aggressively.
+Over-specification is a defect: an aspect that the declaration
+does not intend to constrain MUST be either named in the
+unconstrained block or absent altogether.
+
+### 3.8. Conformance
+
+An implementation conforms to a declaration if and only if every
+contract in the declaration's contracts block holds against that
+implementation. A contract holds when, given its precondition and
+its triggering action, the observable outcome matches its `then`
+clause.
+
+Conformance is observational. Whether a contract holds is
+determined by inspecting the implementation's externally-visible
+behavior, not its internal state (per Section 3.6). This
+specification does not require that contracts be machine-
+executable; a contract written in prose is a contract. Who
+performs the conformance check, and how, are operational concerns
+beyond the scope of this specification.
+
+### 3.9. Spec Evolution
+
+Declarations are version-controlled. Two revisions of a
+declaration admit a *semantic delta*: an enumeration of the
+operations against the schema (additions, removals, mutations,
+promotions, demotions, renames of invariants, assumptions,
+contracts, and unconstrained entries) that distinguish them.
+The semantic delta is well-defined regardless of how the two
+revisions came to differ.
+
+A semantic delta is distinct from a textual diff over the
+serialization. Two revisions that produce no semantic delta are
+equivalent under this specification; two revisions that produce
+no textual diff but differ semantically are malformed (a
+structural error in at least one of them).
+
+When concurrent modifications to a declaration are reconciled,
+the reconciliation MUST occur in the declaration itself, per
+Section 3.1 (declarations are the source of truth). How the
+semantic delta is computed and how reconciliation is performed
+are operational concerns beyond the scope of this specification.
+
+## 4. Serialization (v0.1.0)
+
+This section defines a concrete YAML 1.2 serialization of the
+conceptual model defined in Section 3. The serialization is
+versioned independently of the conceptual model: a future
+revision MAY define additional or alternative serializations
+without changing Section 3.
+
+### 4.1. Physical Format
+
+A `.dx` file MUST be a valid YAML 1.2 [YAML] document, subject to
+the structural constraints in Section 4.2. The canonical file
+extension is `.dx`.
+
+YAML was selected as the v0.1.0 serialization for four reasons:
 
 - **Universal editor support.** Every modern editor highlights
-  YAML out of the box. No plugin, no language-server install, no
-  setup cost for a human reviewer of any background.
+  YAML out of the box, with no plugin required.
 - **Multi-line ergonomics.** The literal block scalar (`|`)
-  preserves human-authored bytes line-by-line, which matters when
-  a contract's `then:` clause references observable output
-  verbatim. JSON has no native multi-line story; TOML's is
-  awkward; HCL's is fine but locks adoption to the HashiCorp
-  ecosystem.
-- **Comment support.** YAML allows `#` comments. This is essential
-  for human authoring and review. JSON's lack of comments alone
-  rules it out for a spec language meant to be read by both humans
-  and machines.
-- **Deterministic AST.** YAML 1.2 is well-specified and produces
-  stable parse trees across implementations *when the strict-
-  subset rules in §8 are applied*. Without those rules YAML is
-  famously unpredictable; the §8 constraints exist precisely to
-  recover the determinism that the broader YAML spec sacrifices.
+  preserves human-authored bytes line by line, which is necessary
+  when contract clauses reference observable output verbatim.
+- **Comment support.** YAML permits `#` comments, which is
+  essential for human authoring and review.
+- **Deterministic AST.** YAML 1.2, when constrained as in Section
+  4.2, produces stable parse trees across implementations.
 
-A custom DSL was rejected because tree-sitter / syntax-highlighter
-investment is a real cost, and no candidate DSL we considered
-offered enough advantage over a strict YAML subset to justify it.
+JSON, TOML, HCL, and a custom DSL were considered and rejected:
+JSON for absence of comments and weak multi-line support; TOML
+for awkward multi-line strings; HCL for ecosystem coupling to a
+single vendor; a custom DSL for tree-sitter and editor-tooling
+costs not justified by the marginal gain over a constrained YAML
+subset.
 
-A future major revision of the language may select a different
-serialization (or admit multiple serializations of the same
-underlying schema). Such a change does not affect Part I.
+### 4.2. Structural Constraints
 
-## 8. Structural Constraints
+To preserve a deterministic Abstract Syntax Tree (AST) and to
+prevent ambiguity that could affect agent processing, the
+following constraints apply to every `.dx` file. The constraints
+are normative and enforceable structurally.
 
-To maintain a deterministic Abstract Syntax Tree (AST) and prevent
-semantic drift during agent processing, the following restrictions
-apply to every `.dx` file. All MUST and MUST NOT clauses are
-enforceable structurally.
-
-- **No Anchors / Aliases.** A `.dx` file MUST NOT use YAML anchors
-  (`&name`) or aliases (`*name`). They introduce hidden state that
-  breaks an agent's local reasoning over the document.
-- **No Custom Tags.** A `.dx` file MUST NOT use explicit YAML tags
+- **Anchors and aliases.** A `.dx` file MUST NOT use YAML
+  anchors (`&name`) or aliases (`*name`). They introduce hidden
+  state that breaks local reasoning over the document.
+- **Custom tags.** A `.dx` file MUST NOT use explicit YAML tags
   outside the implicit core schema (`!!str`, `!!int`, `!!float`,
-  `!!bool`, `!!null`, `!!seq`, `!!map`, `!!timestamp`). `!!binary`,
-  `!!set`, and any user-defined `!foo` tags are rejected.
-- **Literal Scalars Only.** Multi-line strings MUST use the literal
-  block scalar (`|`). The folded scalar (`>`) is rejected because
-  it collapses newlines into spaces in ways that vary subtly
-  across YAML libraries and LLM tokenizers — the resulting decoded
-  value is no longer reliably the bytes the human wrote.
-- **Scalar Leaves.** Map values inside `invariants`, `assumptions`,
-  and `unconstrained` MUST be scalar strings, not nested mappings
-  or sequences. (See §10 for the v0.2 reserved field set, which
-  anticipates relaxing this rule to allow a structured leaf shape.)
-- **Root Key Ordering.** A `.dx` file SHOULD list its top-level
-  keys in this order: `system`, `intent`, `invariants`,
-  `assumptions`, `contracts`, `unconstrained`. A file that violates
-  the SHOULD is structurally valid but is not in canonical form.
-  (See [`README.md`](README.md) for the reference toolchain's `fmt`
-  command, which enforces canonical form automatically.)
+  `!!bool`, `!!null`, `!!seq`, `!!map`, `!!timestamp`).
+  Application-defined tags such as `!!binary`, `!!set`, or
+  user-defined `!foo` are rejected.
+- **Multi-line scalars.** Multi-line strings MUST use the literal
+  block scalar (`|`). The folded block scalar (`>`) is rejected
+  because folding behavior varies subtly across YAML libraries
+  and across LLM tokenizers; the decoded value is no longer
+  reliably the bytes the human wrote.
+- **Scalar leaves.** Map values inside `invariants`,
+  `assumptions`, and `unconstrained` MUST be scalar strings, not
+  nested mappings or sequences. (See Section 4.4 for the v0.2
+  reserved field set, which anticipates relaxing this rule for
+  certain reserved field names.)
+- **Top-level key ordering.** A `.dx` file SHOULD list its
+  top-level keys in the order: `system`, `intent`, `invariants`,
+  `assumptions`, `contracts`, `unconstrained`. A file that
+  violates the SHOULD is structurally valid but is not in
+  canonical form.
 
-## 9. Schema
+### 4.3. Schema
 
-This section defines the YAML shape of each block. The conceptual
-purpose of each block is in Part I §3; only the concrete schema
-appears here.
+This section defines the YAML shape of each component of a
+declaration. The conceptual purpose of each component is in
+Section 3; only the concrete schema is defined here. See Appendix
+A for fully-worked examples.
 
-### `system` (Required)
+#### 4.3.1. system
 
-A string scalar in slug format (conventionally kebab-case, no
-leading digit).
+The value of `system` MUST be a string scalar in slug format
+(conventionally kebab-case, with no leading digit).
+
+#### 4.3.2. intent
+
+The value of `intent` MUST be a mapping with the following
+members:
+
+- `primary`: REQUIRED. A string scalar.
+- `secondary`: OPTIONAL. A sequence of string scalars. Order is
+  significant and MUST be preserved by canonical formatting.
+
+#### 4.3.3. invariants
+
+The value of `invariants` MUST be a mapping from string keys
+(invariant identifiers) to string scalars (invariant bodies).
+The mapping MAY be empty; if empty, it MUST be encoded as `{}`.
+
+Each key SHOULD carry a category prefix per Section 3.4.
+
+#### 4.3.4. assumptions
+
+The value of `assumptions` MUST be a mapping from string keys
+(assumption identifiers) to string scalars (assumption bodies).
+The mapping MAY be empty; if empty, it MUST be encoded as `{}`.
+
+The empty-mapping form is semantically meaningful per Section
+3.5: it asserts that no unrecorded heuristic choices were made.
+
+#### 4.3.5. contracts
+
+The value of `contracts`, if present, MUST be a mapping from
+string keys (contract names) to contract objects. Each contract
+object MUST be a mapping with three string-scalar fields:
+
+- `given`: the precondition under which the contract applies.
+- `when`: the triggering action or event.
+- `then`: the observable outcome that MUST hold.
+
+A contract object that omits any of the three fields is
+malformed.
+
+#### 4.3.6. unconstrained
+
+The value of `unconstrained`, if present, MUST be a mapping from
+string keys (category names) to string scalars (descriptions of
+the freedom granted).
+
+### 4.4. Reserved Field Names
+
+The following field names are reserved within `invariants`,
+`assumptions`, `contracts`, and `unconstrained` map values.
+v0.1.0 does not require them; future revisions of this
+serialization MAY attach normative semantics to each.
+Implementations MUST NOT use these names for unrelated
+purposes.
+
+- `rule`: the constraint or assertion text (the body of a
+  v0.1.0 leaf).
+- `reason`: free-form prose explaining why the entry exists.
+- `author`: the agent or human responsible for the most recent
+  modification of the entry.
+- `since`: the spec version or change identifier in which the
+  entry first appeared.
+
+In v0.1.0, leaves under `invariants`, `assumptions`, and
+`unconstrained` are scalar strings per Section 4.2. The
+reserved-field set anticipates a v0.2 transition to a structured
+leaf shape; reserving the names now permits that transition
+without colliding with field names already in use. Appendix A.5
+shows a forward-compatible v0.2 sketch.
+
+### 4.5. Versioning
+
+This document specifies v0.1.0 of the dx serialization. Future
+revisions will be released as `vMAJOR.MINOR.PATCH` per the
+following rules:
+
+- **Patch** (`v0.1.x`): clarifications, additional reserved
+  names, additional structural checks that reject already-
+  questionable input. No new required fields.
+- **Minor** (`v0.x.0`): new optional blocks, structured forms
+  of existing leaves (gated by the reserved-field discipline in
+  Section 4.4), additional conventions.
+- **Major** (`v1.0.0` and later): commitment to long-term
+  backward compatibility. A major revision MAY also be the point
+  at which an alternative serialization is selected, with
+  Section 3 unchanged.
+
+v0.1.0 does not include an in-band serialization-version
+declaration. A future revision is expected to introduce one
+(likely a top-level `dx_spec` key); until then, `.dx` files
+have no in-band version marker and are assumed to target the
+current released version of this serialization.
+
+The conceptual content of Section 3 is independent of this
+versioning scheme. A change to Section 4 may occur without a
+change to Section 3; a change to Section 3 is a more significant
+event and would coincide with at least a minor release.
+
+## 5. Security Considerations
+
+A `.dx` file is consumed by an agent that produces or modifies
+imperative code. An adversarial declaration could therefore
+direct the agent to produce code with security vulnerabilities,
+backdoors, or unauthorized network or filesystem access.
+Mitigation is the responsibility of the agent runtime and the
+human reviewer; this specification cannot defend against
+adversarial declarations on its own.
+
+Three observations on the threat model are worth recording:
+
+- A declaration can specify only what the implementation MUST
+  do, not what it MUST NOT do. The `unconstrained` block (Section
+  3.7) declares aspects intentionally left open, but it is not a
+  capability list. An agent reading a declaration MAY produce
+  behavior that no invariant or contract addresses; whether that
+  behavior is permitted is a question for the agent runtime, not
+  for the specification.
+- The conformance model defined in Section 3.8 is observational
+  and prose-driven. Whoever performs the conformance check can be
+  deceived by ambiguous prose; a check that does not exercise
+  every contract on every implementation can miss regressions.
+  Operators relying on dx-mediated workflows SHOULD treat
+  conformance checking as a gating step, not as an advisory one.
+- The reserved field set in Section 4.4 anticipates an `author`
+  field. An `author` value is self-asserted; the specification
+  does not define an authentication mechanism. Treat author
+  values as advisory metadata, not as cryptographic provenance.
+
+Future revisions of this specification MAY define explicit
+mechanisms for capability listing, signed authorship, or
+machine-verifiable contract execution. The present specification
+addresses none of these.
+
+## 6. References
+
+[RFC2119] Bradner, S., "Key words for use in RFCs to Indicate
+  Requirement Levels", BCP 14, RFC 2119, March 1997,
+  <https://www.rfc-editor.org/info/rfc2119>.
+
+[RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+  RFC 2119 Key Words", BCP 14, RFC 8174, May 2017,
+  <https://www.rfc-editor.org/info/rfc8174>.
+
+[YAML] Ben-Kiki, O., Evans, C., and I. döt Net, "YAML Ain't
+  Markup Language (YAML™) Version 1.2", 3rd Edition, October
+  2009, <https://yaml.org/spec/1.2.2/>.
+
+[Z] Spivey, J. M., "The Z Notation: A Reference Manual",
+  Prentice Hall, 1989.
+
+[VDM] Jones, C. B., "Systematic Software Development Using
+  VDM", 2nd Edition, Prentice Hall, 1990.
+
+[TLA] Lamport, L., "Specifying Systems: The TLA+ Language and
+  Tools for Hardware and Software Engineers", Addison-Wesley,
+  2002.
+
+[B] Abrial, J.-R., "The B-Book: Assigning Programs to
+  Meanings", Cambridge University Press, 1996.
+
+[Alloy] Jackson, D., "Software Abstractions: Logic, Language,
+  and Analysis", Revised Edition, MIT Press, 2012.
+
+[KIF] Genesereth, M. R. and R. E. Fikes, "Knowledge Interchange
+  Format Version 3.0 Reference Manual", Stanford University
+  Computer Science Department, 1992.
+
+[OWL] W3C OWL Working Group, "OWL 2 Web Ontology Language
+  Document Overview (Second Edition)", W3C Recommendation,
+  December 2012, <https://www.w3.org/TR/owl2-overview/>.
+
+[Eiffel] Meyer, B., "Object-Oriented Software Construction",
+  2nd Edition, Prentice Hall, 1997.
+
+[JML] Leavens, G. T., Baker, A. L., and C. Ruby, "Preliminary
+  Design of JML: A Behavioral Interface Specification Language
+  for Java", ACM SIGSOFT Software Engineering Notes 31(3),
+  2006.
+
+[Strachey] Strachey, C., "Fundamental Concepts in Programming
+  Languages", lecture notes from the International Summer
+  School in Computer Programming, Copenhagen, August 1967;
+  reprinted in Higher-Order and Symbolic Computation 13,
+  2000.
+
+[Scott] Scott, D. S. and C. Strachey, "Toward a Mathematical
+  Semantics for Computer Languages", Programming Research
+  Group Technical Monograph PRG-6, Oxford University, 1971.
+
+## Appendix A. Examples
+
+This appendix provides fully-worked examples of the v0.1.0 YAML
+serialization defined in Section 4. Examples are illustrative and
+informative; they do not extend or override the normative content
+of the preceding sections.
+
+### A.1. A minimal declaration
+
+The smallest well-formed `.dx` file declares a system identifier,
+an intent with a primary objective, and the two REQUIRED but
+possibly empty maps for invariants and assumptions.
+
+```yaml
+system: empty
+intent:
+  primary: A placeholder declaration with no constraints.
+invariants: {}
+assumptions: {}
+```
+
+### A.2. A complete declaration with all blocks
 
 ```yaml
 system: hello-world
-```
-
-### `intent` (Required)
-
-A mapping with two members:
-
-- `primary` — a string scalar. The core objective of the system
-  in one sentence. Required.
-- `secondary` — a sequence of string scalars. Supporting
-  objectives or non-functional goals. Optional. Order is
-  significant and is preserved by canonical formatting.
-
-```yaml
 intent:
   primary: Greet a user by name on standard output.
   secondary:
     - Be friendly.
     - Exit cleanly.
-```
-
-### `invariants` (Required)
-
-A mapping from string keys (invariant identifiers) to string
-scalars (invariant bodies). The block must be present even when
-empty; an empty block is written as `{}`.
-
-Keys SHOULD carry a category prefix. Conventional prefixes
-include `iface_`, `perf_`, `sec_`, `obs_`, `data_`, and `ux_`;
-projects may define additional prefixes used consistently within
-a single file.
-
-The body is a string scalar describing the constraint in
-black-box terms (see Part I §3c for the conceptual rule).
-
-```yaml
 invariants:
   iface_stdout: Writes a single UTF-8 line to stdout terminated by `\n`.
   perf_startup_ms: Cold-start latency must remain under 50ms on commodity hardware.
-```
-
-### `assumptions` (Required)
-
-A mapping from string keys (assumption identifiers) to string
-scalars (assumption bodies). The block must be present even when
-empty; an empty block is written as `{}`.
-
-The empty-block state is meaningful per Part I §3d: it asserts
-"the agent made no unrecorded heuristic choices," distinct from
-"the agent forgot to record any."
-
-```yaml
 assumptions:
   greeting.format: |
     The greeting is "Hello, <name>!" — the spec does not pin
     punctuation or word choice; this matches the canonical
     POSIX-tutorial form.
-```
-
-### `contracts` (Optional)
-
-A mapping from string keys (contract names) to contract objects.
-Each contract object is a mapping with three string-scalar fields:
-
-- `given` — the precondition under which the contract applies.
-- `when` — the triggering action or event.
-- `then` — the observable outcome that must hold.
-
-All three fields are conventionally present. A contract that
-cannot express any one of them in observable terms is a signal
-that the underlying invariant is not testable as a black box and
-may need rephrasing (see Part I §3e).
-
-```yaml
 contracts:
   greets_named_user:
     given: The argument vector contains exactly one non-empty name.
     when: The binary is invoked.
     then: stdout contains "Hello, <name>!\n" and the exit code is 0.
-```
-
-### `unconstrained` (Optional)
-
-A mapping from string keys (category names) to string scalars
-(descriptions of the freedom granted). Both keys and values are
-strings.
-
-Common categories include `language`, `internal_data_structures`,
-`cache_format`, `output_phrasing`, and `concurrency_model` —
-anything the spec wants to leave open. The set is open-ended;
-projects may invent categories as needed.
-
-```yaml
 unconstrained:
   language: Any language with a stable POSIX runtime is acceptable.
 ```
 
-## 10. Reserved Field Names (Future Compatibility)
+### A.3. Multi-line scalars
 
-The following field names are **reserved** within `invariants:`,
-`assumptions:`, `contracts:`, and `unconstrained:` map values.
-v0.1.0 does not require them; a future revision may attach
-normative semantics to each. Tooling MUST NOT use them for
-unrelated purposes.
-
-- `rule` — the constraint or assertion text (the body of a
-  v0.1.0 leaf).
-- `reason` — free-form prose explaining *why* the entry exists.
-- `author` — the agent or human responsible for the most recent
-  mutation (e.g., `agent-architect@cloudcode/2026-05-12`).
-- `since` — the spec version or change identifier in which the
-  entry first appeared.
-
-In v0.1.0, leaves under `invariants:` / `assumptions:` /
-`unconstrained:` are scalar strings (per §8). The reserved-field
-set anticipates a v0.2 transition to a structured shape:
+Single-line bodies use plain scalars. Multi-line bodies use the
+literal block scalar (`|`); the folded block scalar (`>`) is
+prohibited per Section 4.2.
 
 ```yaml
-# Forward-compatible v0.2 sketch -- NOT valid v0.1.0:
+invariants:
+  iface_simple: A single-line invariant body uses a plain scalar.
+  iface_complex: |
+    A multi-line invariant body uses the literal block scalar.
+    Subsequent lines are preserved verbatim, line by line. Use
+    this form when the constraint genuinely requires more than
+    one sentence to express.
+```
+
+### A.4. The empty-block contract
+
+An empty `assumptions` block is semantically meaningful per
+Section 3.5. The two examples below are not equivalent:
+
+```yaml
+# Asserts: no unrecorded heuristic choices were made.
+assumptions: {}
+```
+
+```yaml
+# Malformed: the REQUIRED `assumptions` block is missing.
+# (assumptions key omitted entirely)
+```
+
+### A.5. Forward-compatible v0.2 sketch (NOT valid in v0.1.0)
+
+The reserved field set in Section 4.4 anticipates a v0.2
+transition to a structured leaf shape. The following is not
+valid v0.1.0; it is shown only to clarify the intended direction.
+
+```yaml
 invariants:
   perf_cache_ttl:
     rule: Cache TTL must be strictly 600 seconds.
@@ -551,34 +706,3 @@ invariants:
     author: agent-architect@cloudcode
     since: v0.1.0
 ```
-
-Reserving the names now lets a future revision adopt the
-structured form without colliding with field names already in
-use.
-
-## 11. Versioning
-
-This part of the document describes v0.1.0 of the `.dx`
-serialization. Future revisions will be released as
-`v0.MAJOR.MINOR`:
-
-- **Patch** (`v0.1.x`): clarifications, additional reserved names,
-  additional structural checks that reject already-questionable
-  input. No new required fields.
-- **Minor** (`v0.x.0`): new optional blocks, structured forms of
-  existing leaves (gated by the reserved-field discipline in §10),
-  new conventions.
-- **Major** (`v1.0.0`): commitment to long-term backward
-  compatibility. May also be the point at which a different
-  serialization is selected, while keeping Part I unchanged.
-
-v0.1.0 does not include a top-level spec-version declaration. A
-future revision will introduce one (likely a top-level `dx_spec:`
-key); until then, `.dx` files have no in-band version marker and
-are assumed to target the current released spec.
-
-The conceptual content of Part I is independent of this
-versioning scheme. A change to Part II's serialization may happen
-without changing Part I; a change to Part I's concepts is a more
-significant event and would coincide with a major release.
-

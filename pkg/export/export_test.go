@@ -155,7 +155,7 @@ func TestWrite_JSONOmitsEmptyOptionals(t *testing.T) {
 		t.Errorf("empty unconstrained should be omitted; got:\n%s", s)
 	}
 	// invariants and assumptions are required and must appear as
-	// `{}` (semantic distinction per SPEC §3).
+	// `{}` (semantic distinction per SPEC §4.3).
 	if !strings.Contains(s, "\"invariants\":{}") {
 		t.Errorf("required invariants should appear as {}; got:\n%s", s)
 	}

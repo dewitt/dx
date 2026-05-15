@@ -35,7 +35,7 @@ func TestLint_RejectsFoldedScalar(t *testing.T) {
 
 intent:
   primary: >
-    A folded multiline scalar should be rejected per SPEC §2.
+    A folded multiline scalar should be rejected per SPEC §4.2.
 
 invariants: {}
 assumptions: {}
@@ -111,7 +111,7 @@ assumptions: {}
 }
 
 func TestLint_RejectsNestedInvariant(t *testing.T) {
-	// SPEC §3: invariants leaves must be scalar strings, not maps.
+	// SPEC §4.2: invariants leaves must be scalar strings, not maps.
 	src := `system: t
 
 intent:
@@ -189,7 +189,7 @@ func TestLint_EmptyFile(t *testing.T) {
 }
 
 func TestLint_AcceptsExplicitlyEmptyAssumptions(t *testing.T) {
-	// SPEC §3 explicitly calls out the zero-assumption state: the key
+	// SPEC §4.3 explicitly calls out the zero-assumption state: the key
 	// must be present, but an empty map is valid.
 	src := `system: t
 intent:

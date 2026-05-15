@@ -3,11 +3,11 @@
 // The lint pipeline runs four passes, in order:
 //
 //  1. Parse the file as YAML 1.2 (gopkg.in/yaml.v3) into a node graph.
-//  2. Walk the node graph to enforce SPEC §2 physical rules
+//  2. Walk the node graph to enforce SPEC §4.2 physical rules
 //     (no anchors/aliases, literal scalars only, no custom tags).
 //     See physical.go.
 //  3. Strict-decode the node graph into the AST (unknown fields rejected).
-//  4. Verify required top-level keys are present per SPEC §3.
+//  4. Verify required top-level keys are present per SPEC §4.3.
 //
 // Pass 2 runs before pass 3 because anchors/aliases would otherwise be
 // silently followed by the decoder, producing surprising downstream
@@ -98,14 +98,14 @@ func Lint(path string, data []byte) *Result {
 	res := &Result{Path: path}
 
 	// Pass 1: parse to a node graph so subsequent passes can inspect
-	// physical features the strict decoder would erase (see SPEC §2).
+	// physical features the strict decoder would erase (see SPEC §4.2).
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
 		res.Issues = append(res.Issues, issueFromYAMLErr(path, err))
 		return res
 	}
 
-	// Pass 2: SPEC §2 physical rules. Run before strict-decode because
+	// Pass 2: SPEC §4.2 physical rules. Run before strict-decode because
 	// anchors/aliases would otherwise be silently dereferenced and
 	// folded scalars would be invisibly normalized into Go strings.
 	res.Issues = append(res.Issues, validatePhysical(path, &root)...)
@@ -135,31 +135,31 @@ func Lint(path string, data []byte) *Result {
 	decl.Node = &root
 	res.Declaration = &decl
 
-	// Pass 4: structural validation of required blocks (SPEC §3).
+	// Pass 4: structural validation of required blocks (SPEC §4.3).
 	res.Issues = append(res.Issues, validateRequired(path, &decl)...)
 
 	return res
 }
 
-// validateRequired enforces the "Required" markers in SPEC §3.
+// validateRequired enforces the "Required" markers in SPEC §4.3.
 func validateRequired(path string, d *ast.Declaration) []Issue {
 	var issues []Issue
 
 	if strings.TrimSpace(d.System) == "" {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `system` (SPEC §3)"})
+		issues = append(issues, Issue{Path: path, Message: "missing required key `system` (SPEC §4.3)"})
 	}
 	if strings.TrimSpace(d.Intent.Primary) == "" {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `intent.primary` (SPEC §3)"})
+		issues = append(issues, Issue{Path: path, Message: "missing required key `intent.primary` (SPEC §4.3)"})
 	}
 	// `invariants` and `assumptions` must be present as keys, even when empty
-	// (SPEC §3 explicitly calls out a "zero-assumption" state). The strict
+	// (SPEC §4.3 explicitly calls out a "zero-assumption" state). The strict
 	// decoder will have populated these as nil maps if absent; we cannot
 	// distinguish absent-from-empty without consulting the node graph.
 	if d.Invariants == nil && !hasTopLevelKey(d.Node, "invariants") {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `invariants` (SPEC §3)"})
+		issues = append(issues, Issue{Path: path, Message: "missing required key `invariants` (SPEC §4.3)"})
 	}
 	if d.Assumptions == nil && !hasTopLevelKey(d.Node, "assumptions") {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `assumptions` (SPEC §3)"})
+		issues = append(issues, Issue{Path: path, Message: "missing required key `assumptions` (SPEC §4.3)"})
 	}
 
 	return issues

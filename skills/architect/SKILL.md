@@ -141,7 +141,7 @@ the post-merge ritual in `dx-toolchain` §6a:
 3. Reconcile any semantic conflict by editing the spec, not the
    implementation.
 
-This is the v0.1.0 substitute for a structural merge tool (SPEC §5).
+This is the v0.1.0 substitute for a structural merge tool (SPEC §3.9).
 
 ## 4. The Pruning Pass
 

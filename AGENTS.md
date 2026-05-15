@@ -15,14 +15,12 @@ audit-trail format, and the routing table that decides which
 role-skill to load for a given task. The role-skills (one each for
 the four agents above) build on the rules below.
 
-The behavioral rules in this document follow from the project's
-philosophical position — that the `.dx` file is the *idea* of the
-system and the imperative code is a derived witness. The full
-positioning, including the prior art (Z, TLA+, OWL, Eiffel, the
-denotational-semantics tradition) and what's specifically new in
-the LLM-as-implementer paradigm, is in
-[SPEC.md §1 (Philosophy)](SPEC.md#1-philosophy).
-Worth reading once; everything below operationalizes it.
+The behavioral rules in this document operationalize the dx
+language defined in [`SPEC.md`](SPEC.md). The spec defines what a
+`.dx` file is and what the language commits to; this document
+defines how an agent works with one in this repository. Read the
+spec's introduction (Section 1) for goals, non-goals, and a brief
+acknowledgement of the prior art the language draws from.
 
 ## 1. The Primacy of the Declaration
 The `.dx` file is the source of truth. You must never generate
@@ -50,14 +48,14 @@ The implementer is the only role permitted to *append* to
 ## 3. Verification Loop
 Before declaring a task "complete":
 1. Execute `dx lint` on all modified `.dx` files. Exit code 0 is
-   required. Lint enforces SPEC §2 (no anchors/aliases, no folded
+   required. Lint enforces SPEC §4.2 (no anchors/aliases, no folded
    scalars, no custom tags, scalar leaves under
-   `invariants`/`assumptions`/`unconstrained`) and SPEC §3 (required
+   `invariants`/`assumptions`/`unconstrained`) and  SPEC §4.3 (required
    keys present).
 2. Generate or run the implementation; build/test it in its host
    language.
 3. Compare the implementation behavior against the `contracts:`
-   block. v0.1.0 has no `dx verify` (deferred per SPEC §4); the
+   block. v0.1.0 has no `dx verify` (deferred per SPEC §3.8); the
    [`judge`](skills/judge/SKILL.md) skill is the v0.1.0 contract
    executor — an agent walks each contract by hand or via tool-use.
 4. If a contract fails, treat the failure as a **semantic bug**, not
@@ -82,7 +80,7 @@ dx diff <before>.dx <after>.dx
 
 The output is a stable, machine-parseable ledger of operations
 (`[ADDED]`, `[REMOVED]`, `[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`,
-`[RENAMED]`) ordered by SPEC §2 canonical block order. Paste it into
+`[RENAMED]`) ordered by SPEC §4.2 canonical block order. Paste it into
 your handoff or summary.
 
 Do not summarize code changes; summarize changes to the **intent**
@@ -102,7 +100,7 @@ architect MUST:
 3. Reconcile any conflict in the **spec**, not the implementation.
    Per §1 the `.dx` file leads.
 
-This is the v0.1.0 substitute for a structural merge tool (SPEC §5);
+This is the v0.1.0 substitute for a structural merge tool (SPEC §3.9);
 a future revision may introduce `dx merge`. See
 [`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
 §6a for the full ritual.

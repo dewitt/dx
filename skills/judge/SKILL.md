@@ -36,7 +36,7 @@ You do not:
 
 ### v0.1.0 verification model
 
-There is no `dx verify` command in v0.1.0 (SPEC §4). The judge
+There is no `dx verify` command in v0.1.0 (SPEC §3.8). The judge
 **is** the contract executor: you walk every entry in `contracts:` by
 hand or via your agent runtime's tool-use. A future `dx verify`
 will mechanize the loop you currently perform; until then, your

@@ -42,7 +42,7 @@ func TestMarshal_TopLevelKeyOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// SPEC §2 canonical order: system, intent, invariants,
+	// SPEC §4.2 canonical order: system, intent, invariants,
 	// assumptions, contracts, unconstrained.
 	wantOrder := []string{
 		"system:", "intent:", "invariants:", "assumptions:",

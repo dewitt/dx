@@ -79,11 +79,11 @@ when it evolves.
 > There is no LLM inside the `dx` binary. The intelligence lives
 > in the agents that consume it; the binary is the referee.
 
-The philosophy behind this — why a separate declarative artifact, why
-this particular moment, what the prior art looks like — is laid out in
-[SPEC.md Part I §1 (Philosophy)](SPEC.md#1-philosophy). qThe full
-language definition (concepts plus the v0.1.0 YAML serialization)
-lives in the same document.
+For the goals and non-goals of the dx language, the prior art it
+draws from, and the formal definition of what a `.dx` file is, see
+[SPEC.md](SPEC.md). The spec is the single source of truth for the
+language; this README is the toolchain documentation that ships with
+the reference implementation.
 
 ## Use it with your coding agent
 
@@ -156,7 +156,7 @@ The 30-second tour above is one full example. A larger working example
 with a real C++ legacy implementation and a Python re-synthesis lives
 at [`examples/weather_cli/`](examples/weather_cli/).
 
-For the formal grammar and SPEC §2 physical-rule list, see
+For the formal grammar and SPEC §4.2 physical-rule list, see
 [`SPEC.md`](SPEC.md). For the dense, agent-facing language reference,
 see [`skills/dx-authoring/SKILL.md`](skills/dx-authoring/SKILL.md).
 
@@ -164,7 +164,7 @@ see [`skills/dx-authoring/SKILL.md`](skills/dx-authoring/SKILL.md).
 
 | Command                  | Purpose                                                       |
 | ------------------------ | ------------------------------------------------------------- |
-| `dx lint`           | Validate `.dx` files against SPEC §2 and §3.                  |
+| `dx lint`           | Validate `.dx` files against SPEC §4.2 and §4.3.                |
 | `dx fmt`            | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
 | `dx diff`           | Emit a semantic ledger of operations between two `.dx` files. |
 | `dx export`         | Emit the AST as canonical YAML (default) or compact JSON.     |
@@ -177,7 +177,7 @@ expected, mirroring `git show` syntax.
 `dx verify` — a black-box contract-execution harness — is
 deliberately deferred to v0.2; the rationale and the v0.1.0 substitute
 (the [`judge`](skills/judge/SKILL.md) skill) are documented in
-[SPEC.md §4](SPEC.md#4-verification-model).
+[SPEC.md §3.8](SPEC.md#38-conformance).
 
 See [`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
 for invocation details, exit codes, and the post-merge ritual.
@@ -203,10 +203,11 @@ you're making non-trivial changes:
 
 1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every
    contributor (human or AI) follows in this repository.
-2. [`SPEC.md`](SPEC.md) — the language definition. Part I is the
-   conceptual framework; Part II is the v0.1.0 YAML serialization.
-   The reference toolchain (this repo) is documented in this README,
-   not in the spec.
+2. [`SPEC.md`](SPEC.md) — the language definition (RFC-style:
+   Introduction, Terminology, Concepts in §3, Serialization in §4,
+   Security Considerations, References, Appendix). The reference
+   toolchain (this repo) is documented in this README, not in the
+   spec.
 3. The [`skills/`](skills/) directory — operational playbooks per
    role.
 

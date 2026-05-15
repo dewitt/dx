@@ -22,7 +22,7 @@ of every journey. Today an agent walks each contract by prose; this
 doesn't scale past a handful of contracts and is the single biggest
 practical limitation in v0.1.0.
 
-**Source of truth:** [SPEC.md §4](SPEC.md#4-verification-model)
+**Source of truth:** [SPEC.md §3.8](SPEC.md#38-conformance)
 (deferred to v0.2 with rationale) and the
 ["Gap 1" entry](docs/journeys/port-to-another-language.md#gap-1--no-dx-verify-high-priority)
 in the port journey.
@@ -47,9 +47,9 @@ deferred to v0.2 by deliberate scope-cutting in v0.1.0.
 
 | Direction | Source of truth |
 | --------- | --------------- |
-| Audit-trail leaf shape (`rule:`, `reason:`, `author:`, `since:`) | [SPEC.md §6](SPEC.md#6-reserved-field-names-future-compatibility) |
-| Structural merge tool (`dx merge`) | [SPEC.md §5](SPEC.md#5-concurrent-edit-conflict-resolution) |
-| In-band spec-version declaration (likely `dx_spec:`) | [SPEC.md §7](SPEC.md#7-versioning) |
+| Audit-trail leaf shape (`rule:`, `reason:`, `author:`, `since:`) | [SPEC.md §4.4](SPEC.md#44-reserved-field-names) |
+| Structural merge tool (`dx merge`) | [SPEC.md §3.9](SPEC.md#39-spec-evolution) |
+| In-band spec-version declaration (likely `dx_spec:`) | [SPEC.md §4.5](SPEC.md#45-versioning) |
 
 ## Documentation backlog
 
