@@ -1,106 +1,87 @@
-# Agent Instruction Protocol: Working with `dx`
+# AGENTS
 
-This document defines the behavioral constraints for all AI agents
-(Archaeologists, Architects, Implementers, and Judges) contributing to
-this repository. It is the **shortest** authoritative source: the
-canonical operational playbooks live under [`skills/`](skills/) and
-elaborate every rule below in role-specific terms.
+Behavioral protocol for any agent (human or AI) modifying this
+repository. Five rules. Operational details live in
+[`WORKFLOW.md`](WORKFLOW.md) and the [`skills/`](skills/) directory;
+the language itself is defined in [`SPECIFICATION.md`](SPECIFICATION.md).
 
-## 0. Where to Start
+## 0. Load the orchestrator skill first
 
-Before reading the rest of this file, agents should load
+Before doing anything else, an AI agent operating in this repo
+should load
 [`skills/dx-orchestrator/SKILL.md`](skills/dx-orchestrator/SKILL.md).
-It encodes the prime directive, the `HANDOFF: <from> → <to>: <reason>`
-audit-trail format, and the routing table that decides which
-role-skill to load for a given task. The role-skills (one each for
-the four agents above) build on the rules below.
+It encodes the role-routing table, the handoff format, and the
+prime directive in a form that an agent runtime can act on
+directly. The rules below assume that has happened.
 
-The behavioral rules in this document operationalize the dx
-language defined in [`SPECIFICATION.md`](SPECIFICATION.md). The spec defines what a
-`.dx` file is and what the language commits to; this document
-defines how an agent works with one in this repository. Read the
-spec's introduction (Section 1) for goals, non-goals, and a brief
-acknowledgement of the prior art the language draws from.
+A human reading this file may skip to rule 1.
 
-## 1. The Primacy of the Declaration
-The `.dx` file is the source of truth. You must never generate
-imperative code that violates a defined invariant in the `.dx` file.
-If an invariant is technically impossible to satisfy, you must propose
-a mutation to the `.dx` file rather than "fixing it in code."
+## 1. The .dx file is the source of truth
 
-This is the single rule whose violation defeats `dx`. See the
-[`implementer`](skills/implementer/SKILL.md) skill for the operational
-form: the implementer is forbidden from touching `intent`,
-`invariants`, `contracts`, or `unconstrained`; only the
-[`architect`](skills/architect/SKILL.md) may modify those blocks.
+Never write imperative code that violates a defined invariant in
+the `.dx` file. If an invariant is technically impossible to
+satisfy, propose a mutation to the `.dx` file. Do not weaken the
+code to make a passing fit.
 
-## 2. Explicit Assumption Logging
-When implementation requires a choice not specified in the `intent`
-or `invariants`, you **must not** choose silently.
-1. Add a new entry to the `assumptions` block in the `.dx` file.
-2. Document the heuristic leap **and why it was made**.
-3. Only proceed with implementation once the assumption is recorded.
+This is the rule whose violation defeats the entire system. The
+write privileges that operationalize it are in
+[`WORKFLOW.md` § "Write privileges"](WORKFLOW.md#write-privileges-by-block):
+the implementer is forbidden from touching `intent`, `invariants`,
+`contracts`, or `unconstrained`; only the architect may modify
+those blocks.
+
+## 2. Log heuristic choices before acting on them
+
+When implementation requires a choice not specified in `intent` or
+`invariants`:
+
+1. Add an entry to the `assumptions` block in the `.dx` file.
+2. Document both the choice that was made and the reason it was
+   the most defensible choice given the ambiguity.
+3. Only then write the code that depends on the choice.
+
+Silent invention is the failure mode this rule exists to prevent.
+Any party (human or agent) producing or modifying an
+implementation is bound by it; see
+[`SPECIFICATION.md` §3.5](SPECIFICATION.md#35-assumptions).
 
 The implementer is the only role permitted to *append* to
 `assumptions:` during code generation. The architect *promotes*,
-*demotes*, or *rejects* assumptions as a separate operation.
+*demotes*, or *rejects* assumptions later, as a separate
+operation.
 
-## 3. Verification Loop
-Before declaring a task "complete":
-1. Execute `dx lint` on all modified `.dx` files. Exit code 0 is
-   required. Lint enforces SPEC §4.2 (no anchors/aliases, no folded
-   scalars, no custom tags, scalar leaves under
-   `invariants`/`assumptions`/`unconstrained`) and  SPEC §4.3 (required
-   keys present).
-2. Generate or run the implementation; build/test it in its host
-   language.
-3. Compare the implementation behavior against the `contracts:`
-   block. v0.1.0 has no `dx verify` (deferred per SPEC §3.8); the
-   [`judge`](skills/judge/SKILL.md) skill is the v0.1.0 contract
-   executor — an agent walks each contract by hand or via tool-use.
-4. If a contract fails, treat the failure as a **semantic bug**, not
-   a flaky test. The judge classifies it as either an
-   implementation bug or a spec gap and routes to the appropriate
-   role.
+## 3. Run the verification loop before declaring a task complete
 
-## 4. Pruning and Parsimony
-As an Architect, your goal is the minimum viable constraint set.
-Avoid over-specifying. If the user intent can be achieved without a
-specific invariant, move that constraint to the `unconstrained:`
-block (with a description) or omit it entirely. Over-specification
-is a defect — it forecloses future implementations for no benefit.
+Lint the spec, build the implementation, walk every contract,
+classify any failure. The detailed loop and failure-classification
+rules are in [`WORKFLOW.md` § "The verification loop"](WORKFLOW.md#the-verification-loop).
+Skipping any step is the most common way bugs ship.
 
-## 5. Communication with Humans
-When discussing changes, use `dx diff` to explain semantic
-shifts:
+## 4. Minimum viable constraint set
 
-```
-dx diff <before>.dx <after>.dx
-```
+When acting as architect, the goal is the smallest spec that
+captures the intent. If a requirement can be met without an
+explicit invariant, leave it in `unconstrained` (with a
+description) or omit it entirely. Over-specification forecloses
+future implementations for no benefit.
 
-The output is a stable, machine-parseable ledger of operations
-(`[ADDED]`, `[REMOVED]`, `[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`,
-`[RENAMED]`) ordered by SPEC §4.2 canonical block order. Paste it into
-your handoff or summary.
+## 5. Communicate spec changes via `dx diff`, not text diffs
 
-Do not summarize code changes; summarize changes to the **intent**
-and **invariants**. A text diff over YAML obscures the architectural
-"why" behind the "how"; the semantic ledger is built for that "why".
+When summarizing a `.dx` change for a human or another agent, run
+`dx diff <before>.dx <after>.dx` and paste the output. The result
+is a stable ledger of operations (`[ADDED]`, `[REMOVED]`,
+`[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`, `[RENAMED]`) ordered by
+canonical block order; it surfaces what changed at the level of
+intent and constraints, not at the level of YAML bytes.
 
-## 6. After Merging a `.dx` File
-When a `.dx` file is touched on multiple branches and merged, the
-architect MUST:
+Do not summarize code changes when a `.dx` change is what
+matters. If both changed, summarize the spec change first; the
+code change is downstream.
 
-1. Run `dx lint` on the merge result. A textual three-way merge
-   can produce structurally invalid YAML.
-2. Run `dx diff <merge-base> <merge-result>` to surface every
-   semantic operation introduced by the merge. Even a clean text
-   merge can hide a semantic conflict (e.g., one branch demoted an
-   invariant while the other tightened it).
-3. Reconcile any conflict in the **spec**, not the implementation.
-   Per §1 the `.dx` file leads.
+## 6. After merging a `.dx` file
 
-This is the v0.1.0 substitute for a structural merge tool (SPEC §3.9);
-a future revision may introduce `dx merge`. See
-[`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
-§6a for the full ritual.
+Run the post-merge ritual from
+[`WORKFLOW.md` § "The post-merge ritual"](WORKFLOW.md#the-post-merge-ritual):
+lint the merge result, diff it against the merge base, reconcile
+any semantic conflict in the spec rather than the implementation.
+A clean text-merge can hide a semantic conflict.

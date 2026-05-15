@@ -1,17 +1,24 @@
 # dx
 
-A declarative specification language and toolchain for agentic AI.
+A declarative specification language for AI-assisted software
+development.
 
-`dx` provides a structured boundary between high-level design and
-imperative implementation. In a world where AI writes the code, `dx`
-ensures that humans (and the agents that work with them) maintain
-control over the **intent** and **constraints** of a system without
-being mired in the syntax of any particular implementation.
+A `.dx` file describes what a software system should do — its
+intent, its invariants, the contracts that prove conformance, the
+choices left open to the implementer. The language and its
+toolchain exist to give humans and coding agents a shared,
+auditable record of what was decided, separate from any particular
+implementation in any particular programming language.
+
+The same `.dx` file can govern a Python prototype, a Rust
+production rewrite, and a TypeScript SDK. When the spec changes,
+the diff is a list of operations against the schema (an invariant
+added, an assumption promoted), not a wall of red and green YAML.
+When an agent has to guess, the guess is recorded as an explicit
+assumption before the code is written, so a human can review it
+later.
 
 ## A 30-second tour
-
-A `.dx` file captures what a system should do — not how. E.g., here is
-a `dx` declaration serialized as YAML:
 
 ```yaml
 system: hello-world
@@ -29,22 +36,16 @@ unconstrained:
   language: Any language with a stable POSIX runtime is acceptable.
 ```
 
-### Validation
-
-The `dx` CLI validates it:
+Validate it:
 
 ```console
 $ dx lint hello.dx
 hello.dx: ok
 ```
 
-### Semantic Diff
-
-When the spec evolves, `dx diff` reports the *semantic* change — not
-artifacts from serialization. E.g., reordering keys produces zero
-output; whereas promoting an `assumption` to an `invariant` produces a
-semantically meaningful diff.  Here's a real diff between two
-revisions of a slightly larger spec:
+When the spec evolves, `dx diff` reports the semantic change.
+Reordering keys produces no output. Promoting an assumption to an
+invariant produces one line:
 
 ```console
 $ dx diff HEAD:system.dx system.dx
@@ -53,56 +54,29 @@ $ dx diff HEAD:system.dx system.dx
 [ADDED]    unconstrained.language
 ```
 
-## Why dx exists
+That `[PROMOTED]` line is the discipline. It records that the
+architect considered an open question and committed to a constraint,
+in a form that survives code review and chat-handoff.
 
-Modern coding agents excel at writing imperative code from prompts but
-fail in two predictable ways:
+## Use it with a coding agent
 
-- **They silently invent missing details.** A prompt says "fetch the
-  user's email"; the agent quietly picks a timeout, a retry policy, a
-  cache strategy, and a JSON shape, and bakes them into the code. The
-  human never sees the choices, can't audit them, and can't ratify or
-  reject them later.
-- **They drift across iterations.** What was implicit in last week's
-  prompt is gone from this week's context. The new code subtly
-  contradicts the old. Six iterations in, nobody knows what the system
-  is supposed to do.
+The `dx` binary is one half of the story. The other half is the
+seven agent skills shipped under [`skills/`](skills/), which teach
+a coding agent (Claude Code, Gemini CLI, Cursor, or any agent that
+reads Markdown skills) the four roles the workflow defines:
+archaeologist, architect, implementer, and judge. Each role has
+its own write privileges on the `.dx` file; the orchestrator skill
+routes work between them.
 
-`dx` addresses both. The `.dx` file is the version-controlled,
-machine-validated record of what was decided and what was deliberately
-left open. The `assumptions:` block is where every heuristic an agent
-makes gets recorded *before* it touches the code — turning silent
-hallucinations into auditable, promotable workflow state. The CLI
-enforces the spec and reports *semantic* changes (not text changes)
-when it evolves.
-
-> There is no LLM inside the `dx` binary. The intelligence lives
-> in the agents that consume it; the binary is the referee.
-
-For the goals and non-goals of the dx language, the prior art it
-draws from, and the formal definition of what a `.dx` file is, see
-[SPECIFICATION.md](SPECIFICATION.md). The spec is the single source of truth for the
-language; this README is the toolchain documentation that ships with
-the reference implementation.
-
-## Use it with your coding agent
-
-The interesting workflow isn't a human typing `dx lint` in a
-terminal — it's a coding agent (Claude Code, Gemini CLI, Cursor, your
-in-house agent loop, anything that consumes Markdown skills) that uses
-`dx` to keep itself honest while it writes code.
-
-The repo ships seven portable agent skills under [`skills/`](skills/)
-that teach any compatible agent various roles found to be valuable in
-separating the various critical roles (e.g., reverse engineering
-existing code, architecting new code, implementing code, evaluating
-conformance to specification, etc).
-
-The fastest way to see this work is to walk
-[the port-to-another-language journey](docs/journeys/port-to-another-language.md):
+The fastest way to see the workflow in motion is the
+[port-to-another-language journey](docs/journeys/port-to-another-language.md):
 hand a coding agent an existing program in one language, watch it
-produce a `.dx` spec, then watch it synthesize an equivalent program in
-a different language that passes every contract. 
+extract a `.dx` spec, then watch it synthesize an equivalent
+program in a different language that passes every contract. The
+journey doc has been clean-room-tested end-to-end against
+gemini-cli on a fresh system; the other three documented journeys
+(greenfield, add-a-feature, multi-implementation) follow the same
+shape.
 
 ## Install
 
@@ -111,106 +85,74 @@ git clone https://github.com/dewitt/dx && cd dx
 go build -o ./bin/dx ./cmd/dx
 ```
 
-The result is a single statically-linked Go binary. To use it from any
-directory, drop it on your `$PATH`:
+The result is a single statically-linked Go binary. Drop it on
+`$PATH` to use from anywhere:
 
 ```bash
-cp ./bin/dx ~/bin/      # or wherever your $PATH lives
+cp ./bin/dx ~/bin/
 dx --version
 ```
-
-## User journeys
-
-Step-by-step walkthroughs for using `dx` to accomplish concrete
-tasks live under [`docs/journeys/`](docs/journeys/). Each journey is
-agent-agnostic with at least one concrete example, names the skills
-that drive each phase, and lists known gaps in v0.1.0.
-
-| Journey | What it covers |
-| ------- | -------------- |
-| [Greenfield development](docs/journeys/greenfield-development.md) | Start from a vague idea, iterate `system.dx` with an agent until the spec converges, then one-shot the first implementation. |
-| [Add a feature to an existing program](docs/journeys/add-a-feature.md) | Extend a `.dx`-managed system: spec changes first; the implementer reads the diff to know exactly what to update; the judge re-runs every contract to catch regressions. |
-| [Add a feature to multiple implementations](docs/journeys/add-a-feature-to-multiple-implementations.md) | The library / SDK case: one spec governs N language implementations (e.g., Python + Go + TypeScript). One architect commit; N parallel implementer sessions blind to each other; one judge grid that catches cross-language drift. |
-| [Port a program to another language](docs/journeys/port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent program in a new language without ever reading the original source. |
-
-See the [`docs/journeys/` index](docs/journeys/README.md) for how the
-journeys relate to each other. Per-journey "Known gaps" sections
-list the v0.1.x toolchain limitations that bite at each step.
-
-## What's in `.dx`
-
-A `.dx` file is YAML 1.2 with a strict subset enforced by `dx lint`.
-Six top-level blocks, in canonical order:
-
-| Block            | Required | Holds                                                          |
-| ---------------- | :------: | -------------------------------------------------------------- |
-| `system`         |    yes   | A short slug naming the declaration.                           |
-| `intent`         |    yes   | The high-level purpose: `primary` (one sentence) plus optional `secondary` goals. |
-| `invariants`     |    yes   | Non-negotiable observable behaviors.                           |
-| `assumptions`    |    yes   | Heuristic choices the agent made that the human hasn't ratified. May be empty (`{}`), but the key must exist. |
-| `contracts`      |    no    | Black-box `given` / `when` / `then` rules a judge can check.   |
-| `unconstrained`  |    no    | Explicitly-declared degrees of freedom (e.g., language choice, internal storage). Prevents over-specification. |
-
-The 30-second tour above is one full example. A larger working example
-with a real C++ legacy implementation and a Python re-synthesis lives
-at [`examples/weather_cli/`](examples/weather_cli/).
-
-For the formal grammar and SPEC §4.2 physical-rule list, see
-[`SPECIFICATION.md`](SPECIFICATION.md). For the dense, agent-facing language reference,
-see [`skills/dx-authoring/SKILL.md`](skills/dx-authoring/SKILL.md).
 
 ## CLI reference
 
 | Command                  | Purpose                                                       |
 | ------------------------ | ------------------------------------------------------------- |
-| `dx lint`           | Validate `.dx` files against SPEC §4.2 and §4.3.                |
-| `dx fmt`            | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
-| `dx diff`           | Emit a semantic ledger of operations between two `.dx` files. |
-| `dx export`         | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `dx contracts list` | Enumerate the contract identifiers in a `.dx` file.           |
+| `dx lint <source>`       | Validate a `.dx` source against the spec.                     |
+| `dx fmt <source>`        | Canonicalize formatting (idempotent, AST-preserving).         |
+| `dx diff <old> <new>`    | Emit a semantic ledger of operations between two declarations. |
+| `dx export <source>`     | Emit the AST as canonical YAML or compact JSON.               |
+| `dx contracts list <source>` | Enumerate the contract identifiers in a declaration.       |
 
-Every source-accepting command also takes git revision specs
-(`HEAD:system.dx`, `main:foo.dx`, `v0.1.0:bar.dx`) anywhere a path is
-expected, mirroring `git show` syntax.
+Every source argument accepts a filesystem path or a git revision
+spec (`HEAD:foo.dx`, `main:bar.dx`, `v0.1.0:baz.dx`), mirroring
+`git show` syntax.
 
-`dx verify` — a black-box contract-execution harness — is
-deliberately deferred to v0.2; the rationale and the v0.1.0 substitute
-(the [`judge`](skills/judge/SKILL.md) skill) are documented in
-[SPECIFICATION.md §3.8](SPECIFICATION.md#38-conformance).
+`dx verify`, a black-box contract executor, is deferred to v0.2.
+The judge skill is its v0.1.0 substitute.
 
-See [`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
-for invocation details, exit codes, and the post-merge ritual.
+For invocation details, exit codes, and the post-merge ritual, see
+[`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md).
+
+## User journeys
+
+End-to-end walkthroughs for using `dx` to accomplish concrete
+tasks live under [`docs/journeys/`](docs/journeys/):
+
+| Journey | When to use it |
+| ------- | -------------- |
+| [Greenfield development](docs/journeys/greenfield-development.md) | Starting from a vague idea; iterate the spec to convergence before any code is written. |
+| [Add a feature](docs/journeys/add-a-feature.md) | Extend an existing `.dx`-managed system; spec changes first, then the implementer reads the diff and updates the code. |
+| [Add a feature to multiple implementations](docs/journeys/add-a-feature-to-multiple-implementations.md) | One `.dx` governs N language implementations (the SDK case); one architect commit, N parallel implementer sessions, one verification grid. |
+| [Port a program to another language](docs/journeys/port-to-another-language.md) | Reverse-engineer an existing implementation, then synthesize an equivalent in a different language without reading the original source. |
+
+See the [journeys index](docs/journeys/README.md) for how the
+journeys relate to each other.
 
 ## Project layout
 
 ```
 .
-├── SPECIFICATION.md        # The dx language definition (RFC-style).
-├── WORKFLOW.md             # The recommended multi-agent operating workflow.
-├── AGENTS.md               # Behavioral protocol for every agent in this repo.
-├── cmd/dx/                 # CLI entry point.
-├── pkg/                    # Library packages (ast, lint, canonical, diff, export, contracts).
-├── skills/                 # Seven portable agent skills (orchestrator + 4 roles + 2 references).
-├── docs/journeys/          # End-to-end walkthroughs for real tasks.
-└── examples/               # hello.dx, weather_cli/, plus deliberate-failure fixtures for tests.
+├── SPECIFICATION.md        The dx language definition (RFC-style).
+├── WORKFLOW.md             The recommended multi-agent operating workflow.
+├── AGENTS.md               Behavioral protocol for agents in this repo.
+├── README.md               This file.
+├── cmd/dx/                 CLI entry point.
+├── pkg/                    Library packages: ast, lint, canonical, diff, export, contracts.
+├── skills/                 Seven portable agent skills.
+├── docs/journeys/          End-to-end walkthroughs.
+└── examples/               hello.dx, weather_cli/, plus deliberate-failure fixtures for tests.
 ```
 
 ## Contributing
 
-Three documents govern this project. Read them in this order if
-you're making non-trivial changes:
+The four documents that govern the project, in reading order:
 
-1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every
-   contributor (human or AI) follows in this repository.
-2. [`SPECIFICATION.md`](SPECIFICATION.md) — the language definition (RFC-style:
-   Introduction, Terminology, Concepts in §3, Serialization in §4,
-   Security Considerations, References, Appendix). The reference
-   toolchain (this repo) is documented in this README, not in the
-   spec.
-3. The [`skills/`](skills/) directory — operational playbooks per
-   role.
+1. [`SPECIFICATION.md`](SPECIFICATION.md) — what the dx language is.
+2. [`WORKFLOW.md`](WORKFLOW.md) — how the multi-agent workflow operates on a `.dx` file.
+3. [`AGENTS.md`](AGENTS.md) — behavioral protocol for any agent (human or AI) modifying this repository.
+4. The [`skills/`](skills/) directory — operational playbooks per role.
 
-Standard build / vet / test:
+Build, vet, and test:
 
 ```bash
 go build ./...
@@ -218,16 +160,16 @@ go vet ./...
 go test ./...
 ```
 
-Lint every `.dx` in the repo:
+Lint the bundled examples:
 
 ```bash
 ./bin/dx lint examples/hello.dx examples/weather_cli/system.dx
 ```
 
-If you're not sure where to start, the two largest open questions
-are the design of `dx verify` (a black-box contract executor; see
+Two open design questions are good places to contribute: the
+`dx verify` contract-execution harness (deferred to v0.2; see
 [`SPECIFICATION.md` §3.8](SPECIFICATION.md#38-conformance) for the
-deferral rationale) and a convention for keeping the implementer
-honest about not reading the original source during a port (see
-[the port journey's "Known gaps" section](docs/journeys/port-to-another-language.md#known-gaps-in-this-journey-priority-todos)).
-Both welcome real proposals.
+rationale), and a convention for keeping the implementer honest
+about not reading the original source during a port (the port
+journey's [Known gaps section](docs/journeys/port-to-another-language.md#known-gaps-in-this-journey-priority-todos)
+documents the current state).
