@@ -27,7 +27,7 @@ func TestIsFilesystemPath(t *testing.T) {
 		{"HEAD~1:hello.dx", false, "git ref with tilde"},
 		{"main:examples/hello.dx", false, "branch ref + nested path"},
 		{"deadbeef:hello.dx", false, "SHA-like ref"},
-		{"v0.1.0:SPEC.md", false, "tag ref"},
+		{"v0.1.0:SPECIFICATION.md", false, "tag ref"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {

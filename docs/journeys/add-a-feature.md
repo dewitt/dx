@@ -276,7 +276,7 @@ the same v0.1.0 limitations apply. Two are particularly acute:
 - **No reason field on invariants/contracts.** When you mutate an
   existing invariant for a feature, future architects won't know
   *why*. The
-  [SPEC §4.4](../../SPEC.md#44-reserved-field-names)
+  [SPEC §4.4](../../SPECIFICATION.md#44-reserved-field-names)
   reserved `reason:` field exists exactly for this; it's not
   expressible in v0.1.0. Until then, the git commit message is the
   audit trail.

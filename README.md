@@ -81,7 +81,7 @@ when it evolves.
 
 For the goals and non-goals of the dx language, the prior art it
 draws from, and the formal definition of what a `.dx` file is, see
-[SPEC.md](SPEC.md). The spec is the single source of truth for the
+[SPECIFICATION.md](SPECIFICATION.md). The spec is the single source of truth for the
 language; this README is the toolchain documentation that ships with
 the reference implementation.
 
@@ -134,9 +134,8 @@ that drive each phase, and lists known gaps in v0.1.0.
 | [Port a program to another language](docs/journeys/port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent program in a new language without ever reading the original source. |
 
 See the [`docs/journeys/` index](docs/journeys/README.md) for how the
-journeys relate to each other, plus
-[`ROADMAP.md`](ROADMAP.md) for the prioritized list of tooling and
-spec gaps.
+journeys relate to each other. Per-journey "Known gaps" sections
+list the v0.1.x toolchain limitations that bite at each step.
 
 ## What's in `.dx`
 
@@ -157,7 +156,7 @@ with a real C++ legacy implementation and a Python re-synthesis lives
 at [`examples/weather_cli/`](examples/weather_cli/).
 
 For the formal grammar and SPEC §4.2 physical-rule list, see
-[`SPEC.md`](SPEC.md). For the dense, agent-facing language reference,
+[`SPECIFICATION.md`](SPECIFICATION.md). For the dense, agent-facing language reference,
 see [`skills/dx-authoring/SKILL.md`](skills/dx-authoring/SKILL.md).
 
 ## CLI reference
@@ -177,7 +176,7 @@ expected, mirroring `git show` syntax.
 `dx verify` — a black-box contract-execution harness — is
 deliberately deferred to v0.2; the rationale and the v0.1.0 substitute
 (the [`judge`](skills/judge/SKILL.md) skill) are documented in
-[SPEC.md §3.8](SPEC.md#38-conformance).
+[SPECIFICATION.md §3.8](SPECIFICATION.md#38-conformance).
 
 See [`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
 for invocation details, exit codes, and the post-merge ritual.
@@ -186,10 +185,10 @@ for invocation details, exit codes, and the post-merge ritual.
 
 ```
 .
-├── SPEC.md                 # Concepts + v0.1.0 serialization + reference-implementation pointer.
+├── SPECIFICATION.md        # The dx language definition (RFC-style).
+├── WORKFLOW.md             # The recommended multi-agent operating workflow.
 ├── AGENTS.md               # Behavioral protocol for every agent in this repo.
-├── ROADMAP.md              # Prioritized index of known gaps and v0.2 work.
-├── cmd/dx/            # CLI entry point.
+├── cmd/dx/                 # CLI entry point.
 ├── pkg/                    # Library packages (ast, lint, canonical, diff, export, contracts).
 ├── skills/                 # Seven portable agent skills (orchestrator + 4 roles + 2 references).
 ├── docs/journeys/          # End-to-end walkthroughs for real tasks.
@@ -203,7 +202,7 @@ you're making non-trivial changes:
 
 1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every
    contributor (human or AI) follows in this repository.
-2. [`SPEC.md`](SPEC.md) — the language definition (RFC-style:
+2. [`SPECIFICATION.md`](SPECIFICATION.md) — the language definition (RFC-style:
    Introduction, Terminology, Concepts in §3, Serialization in §4,
    Security Considerations, References, Appendix). The reference
    toolchain (this repo) is documented in this README, not in the
@@ -225,7 +224,10 @@ Lint every `.dx` in the repo:
 ./bin/dx lint examples/hello.dx examples/weather_cli/system.dx
 ```
 
-If you're not sure where to start, [`ROADMAP.md`](ROADMAP.md) lists the
-v0.1.x and v0.2 gaps in priority order. The `dx verify` design and
-the implementer no-peeking convention are the two largest open
-questions and welcome real proposals.
+If you're not sure where to start, the two largest open questions
+are the design of `dx verify` (a black-box contract executor; see
+[`SPECIFICATION.md` §3.8](SPECIFICATION.md#38-conformance) for the
+deferral rationale) and a convention for keeping the implementer
+honest about not reading the original source during a port (see
+[the port journey's "Known gaps" section](docs/journeys/port-to-another-language.md#known-gaps-in-this-journey-priority-todos)).
+Both welcome real proposals.

@@ -257,7 +257,7 @@ greenfield work:
 
 - [`AGENTS.md`](../../AGENTS.md) — universal rules every contributor
   follows in a `dx`-managed repo.
-- [`SPEC.md`](../../SPEC.md) — normative `.dx` reference.
+- [`SPECIFICATION.md`](../../SPECIFICATION.md) — normative `.dx` reference.
 - [`skills/architect/SKILL.md`](../../skills/architect/SKILL.md) — the
   central skill for this journey; do this with the human as
   co-architect, not as a passive reviewer.

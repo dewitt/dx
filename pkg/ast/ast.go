@@ -1,6 +1,6 @@
 // Package ast defines the in-memory representation of a `.dx` declaration.
 //
-// The AST mirrors the schema described in SPEC.md (v0.1.0). It is intentionally
+// The AST mirrors the schema described inSPECIFICATION.md (v0.1.0). It is intentionally
 // shallow: the `.dx` file is the source of truth, and the AST is a transparent
 // projection of it. We retain the original *yaml.Node graph alongside the
 // decoded values so that downstream tooling (lint, fmt, diff) can inspect

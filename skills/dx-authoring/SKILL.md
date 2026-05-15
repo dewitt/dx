@@ -12,7 +12,7 @@ description: |
 # Authoring `.dx` Files
 
 This skill is the working reference for the `.dx` language. The normative
-source is `SPEC.md` at the repo root; this document is a denser, more
+source is `SPECIFICATION.md` at the repo root; this document is a denser, more
 prescriptive version meant to be read by an agent before each emission.
 
 ## 1. Physical Format (SPEC §4.1–§4.2)

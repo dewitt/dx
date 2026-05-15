@@ -155,10 +155,8 @@ The discipline:
   read-only access to `system.dx`). If your runtime has an allowlist,
   use it; if not, instruct the agent explicitly.
 - **Add a workspace-level pattern** like a `.dx-implementer-allowlist`
-  convention if you find yourself doing many of these (the
-  no-peeking-enforcement design is on the
-  [ROADMAP](../../ROADMAP.md) for v0.2; until then it's
-  honor-system).
+  convention if you find yourself doing many of these. No-peeking
+  enforcement is deferred to v0.2; until then it is honor-system.
 
 ### Per-language prompt template
 

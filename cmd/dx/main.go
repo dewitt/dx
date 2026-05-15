@@ -112,7 +112,7 @@ func newDiffCmd() *cobra.Command {
 		Long: "Parses both sources into the AST and reports a stable, " +
 			"machine-parseable list of operations that describe how the " +
 			"declaration's intent and constraints changed (per " +
-			"SPEC.md §3.9 and AGENTS.md §5). Use this -- not text " +
+			"SPECIFICATION.md §3.9 and AGENTS.md §5). Use this -- not text " +
 			"diff -- to communicate spec changes to a human or another " +
 			"agent.\n\n" +
 			"Each source may be either a filesystem path or a git " +

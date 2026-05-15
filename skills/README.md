@@ -31,7 +31,7 @@ If your agent does not auto-load skills, instruct it to read
 ## Design notes
 
 - The skills assume the universal rules in the repo-root `AGENTS.md` are in
-  effect. They cite specific sections of `AGENTS.md` and `SPEC.md` rather
+  effect. They cite specific sections of `AGENTS.md` and `SPECIFICATION.md` rather
   than restating those documents.
 - The four role-skills (`archaeologist`, `architect`, `implementer`,
   `judge`) deliberately have **non-overlapping write privileges** on the

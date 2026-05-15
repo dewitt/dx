@@ -44,7 +44,7 @@ Every command that takes a `<source>` argument (`lint`, `diff`,
 
 The git-revision form mirrors `git show` syntax exactly. Anything
 git accepts as `<rev>` works: a branch (`main:foo.dx`), a tag
-(`v0.1.0:SPEC.md`), a relative ref (`HEAD~3:system.dx`), an explicit
+(`v0.1.0:SPECIFICATION.md`), a relative ref (`HEAD~3:system.dx`), an explicit
 SHA (`abc123:system.dx`).
 
 ### Disambiguation rules

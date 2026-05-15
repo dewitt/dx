@@ -51,9 +51,7 @@ Not currently planned but plausible candidates if there's demand:
   artifact instead of the README.
 
 If you'd like one of these (or another) sooner, file an issue or
-open a PR with a draft. The
-[ROADMAP](../../ROADMAP.md) tracks documentation gaps alongside
-toolchain gaps.
+open a PR with a draft.
 
 ## Contributing a journey
 

@@ -2,7 +2,7 @@
 
 This document describes the recommended multi-agent workflow for
 operating the dx language. It is prescriptive — it tells you what
-to do — but it is not normative. The dx language [SPEC.md](SPEC.md)
+to do — but it is not normative. The dx language [SPECIFICATION.md](SPECIFICATION.md)
 permits other operationalizations: a solo human authoring a `.dx`
 file and implementing it themselves, a single agent acting in all
 roles across one session, a fully automated pipeline that never
@@ -22,7 +22,7 @@ to keep AI-mediated work auditable.
 
 | Document | Defines | Scope |
 |---|---|---|
-| [`SPEC.md`](SPEC.md) | The dx language | Universal; replaceable toolchains and workflows. |
+| [`SPECIFICATION.md`](SPECIFICATION.md) | The dx language | Universal; replaceable toolchains and workflows. |
 | [`README.md`](README.md) | The reference toolchain | One toolchain implementation; the `dx` binary. |
 | `WORKFLOW.md` (this doc) | The recommended workflow | One operationalization; the multi-agent loop. |
 | [`skills/`](skills/) | Per-role enforcement | Implements this workflow as agent-loadable skills. |
@@ -263,7 +263,7 @@ touches a `.dx` file:
    look for surprises.
 3. **Reconcile semantic conflicts in the spec.** Any conflict
    visible in the diff is a spec-level conflict and must be
-   resolved by editing the `.dx` file. Per [SPEC §3.1](SPEC.md#31-declarations),
+   resolved by editing the `.dx` file. Per [SPEC §3.1](SPECIFICATION.md#31-declarations),
    the declaration is the source of truth; if the
    implementations disagree about what the spec means, the spec
    is at fault and must be made unambiguous.
@@ -276,7 +276,7 @@ operations is a sign that the textual merge collapsed two
 intentional changes into one, and the architect must restore
 both.
 
-The dx language does not require this ritual ([SPEC §3.9](SPEC.md#39-spec-evolution)
+The dx language does not require this ritual ([SPEC §3.9](SPECIFICATION.md#39-spec-evolution)
 deliberately leaves merge reconciliation to the host VCS plus
 human judgment). It is the workflow's recommended discipline,
 not a normative spec rule.

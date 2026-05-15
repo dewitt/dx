@@ -1,4 +1,4 @@
-// Package lint validates `.dx` files against the structural rules in SPEC.md.
+// Package lint validates `.dx` files against the structural rules in SPECIFICATION.md.
 //
 // The lint pipeline runs four passes, in order:
 //

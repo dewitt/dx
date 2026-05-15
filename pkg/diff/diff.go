@@ -4,7 +4,7 @@
 // A textual diff over the raw YAML is structurally hostile to review --
 // reordering keys, reflowing literal scalars, or changing comment
 // placement all explode into noisy red/green even when the spec did not
-// change. SPEC.md §3.9 (Spec Evolution) defines a *semantic delta*
+// change. SPECIFICATION.md §3.9 (Spec Evolution) defines a *semantic delta*
 // over the schema as the right unit of change reporting:
 //
 //	[ADDED]    invariants.perf_p99_ms

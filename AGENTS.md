@@ -16,7 +16,7 @@ role-skill to load for a given task. The role-skills (one each for
 the four agents above) build on the rules below.
 
 The behavioral rules in this document operationalize the dx
-language defined in [`SPEC.md`](SPEC.md). The spec defines what a
+language defined in [`SPECIFICATION.md`](SPECIFICATION.md). The spec defines what a
 `.dx` file is and what the language commits to; this document
 defines how an agent works with one in this repository. Read the
 spec's introduction (Section 1) for goals, non-goals, and a brief

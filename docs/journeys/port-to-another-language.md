@@ -312,7 +312,7 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and prompt:
 
 **Operational note (current gap):** there is no `dx verify`
 command in v0.1.0 (deferred to v0.2 per
-[SPEC §3.8](../../SPEC.md#38-conformance)). The judge **is** the
+[SPEC §3.8](../../SPECIFICATION.md#38-conformance)). The judge **is** the
 contract executor today: an agent walks each contract by hand or via
 its tool-use. This works fine for a handful of contracts; it does
 not scale to dozens. The biggest priority gap in this journey is
@@ -417,7 +417,7 @@ mechanically — a perfect illustration of Gap 1 above.
 - [`AGENTS.md`](../../AGENTS.md) — the universal rules every agent
   follows in this repo, including the verification loop and the
   post-merge ritual.
-- [`SPEC.md`](../../SPEC.md) — the normative `.dx` language reference.
+- [`SPECIFICATION.md`](../../SPECIFICATION.md) — the normative `.dx` language reference.
 - [`skills/dx-orchestrator/SKILL.md`](../../skills/dx-orchestrator/SKILL.md)
   — the meta-routing skill an agent loads on entering a
   `dx`-managed repo.
