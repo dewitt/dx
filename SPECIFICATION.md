@@ -1,7 +1,7 @@
 # The dx Specification Language
 
 > **Status:** Experimental. This document specifies an experimental
-> language and is not on any standards track. It is published to
+> language and is not intended for production use. It is published to
 > invite review, criticism, and revision. The language and this
 > document may change incompatibly in future revisions.
 
