@@ -10,13 +10,12 @@ toolchain exist to give humans and coding agents a shared,
 auditable record of what was decided, separate from any particular
 implementation in any particular programming language.
 
-The same `.dx` file can govern a Python prototype, a Rust
-production rewrite, and a TypeScript SDK. When the spec changes,
-the diff is a list of operations against the schema (an invariant
-added, an assumption promoted), not a wall of red and green YAML.
-When an agent has to guess, the guess is recorded as an explicit
-assumption before the code is written, so a human can review it
-later.
+The same `.dx` file can govern any number of concrete
+implementations. When the spec changes, the diff is a list of
+operations against the schema (an invariant added, an assumption
+promoted), not a wall of red and green YAML. When an agent has to
+guess, the guess is recorded as an explicit assumption before the
+code is written, so a human can review it later.
 
 ## A 30-second tour
 
@@ -145,7 +144,8 @@ journeys relate to each other.
 
 ## Contributing
 
-The four documents that govern the project, in reading order:
+The project is governed by three documents and one directory of
+skills, in reading order:
 
 1. [`SPECIFICATION.md`](SPECIFICATION.md) — what the dx language is.
 2. [`WORKFLOW.md`](WORKFLOW.md) — how the multi-agent workflow operates on a `.dx` file.
@@ -166,10 +166,5 @@ Lint the bundled examples:
 ./bin/dx lint examples/hello.dx examples/weather_cli/system.dx
 ```
 
-Two open design questions are good places to contribute: the
-`dx verify` contract-execution harness (deferred to v0.2; see
-[`SPECIFICATION.md` §3.8](SPECIFICATION.md#38-conformance) for the
-rationale), and a convention for keeping the implementer honest
-about not reading the original source during a port (the port
-journey's [Known gaps section](docs/journeys/port-to-another-language.md#known-gaps-in-this-journey-priority-todos)
-documents the current state).
+Open design questions worth contributing to are listed in
+[`SPECIFICATION.md` §3.10](SPECIFICATION.md#310-future-directions).
