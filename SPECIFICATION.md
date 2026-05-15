@@ -229,6 +229,29 @@ for which every invariant holds.
 The invariants block MAY be empty. An empty invariants block
 asserts that the system has no constraints beyond its intent.
 
+An invariant MAY be phrased as a positive requirement (the
+implementation MUST do X) or as a negative requirement (the
+implementation MUST NOT do Y). Both forms describe observable
+properties; the language draws no structural distinction between
+them. Negative invariants are how a declaration captures
+forbidden behaviors that complement what the system is required
+to do. For example:
+
+```yaml
+invariants:
+  iface_returns_token: On successful authentication, returns a
+    bearer token in the Authorization header.
+  sec_no_credential_logs: Credentials, tokens, and any other
+    secret material MUST NOT be written to any log stream or
+    diagnostic output.
+```
+
+Both entries above are observable in principle. The first is
+straightforward to verify; the second is harder (it requires
+checking the absence of a property, not the presence of one) and
+is constrained by the limits of observational verification. See
+Section 5 for the security implications.
+
 Conventional category prefixes include `iface_` (interface
 behavior), `perf_` (performance), `sec_` (security), `obs_`
 (observability), `data_` (data shape and persistence), and `ux_`
@@ -351,6 +374,52 @@ the reconciliation MUST occur in the declaration itself, per
 Section 3.1 (declarations are the source of truth). How the
 semantic delta is computed and how reconciliation is performed
 are operational concerns beyond the scope of this specification.
+
+### 3.10. Future Directions
+
+This subsection records concepts that are deliberately out of
+scope for v0.1.0 but are real candidates for a future revision.
+They are described here so that an implementer or contributor can
+work around their absence with the right framing, and so that a
+later revision can address them without inventing them from
+scratch.
+
+**Composition.** v0.1.0 assumes a single declaration per system.
+Real-world projects (microservices, monorepos with shared
+libraries, cross-language SDKs of one library) routinely have
+multiple declarations that share invariants or contracts. A
+future revision is expected to define a composition mechanism —
+likely a top-level block that allows one declaration to import
+named invariants and contracts from another — so that a shared
+API contract has exactly one canonical definition. Until then,
+the workaround is to duplicate shared invariants across files
+and accept the manual reconciliation cost.
+
+**Contract grouping.** v0.1.0 requires every contract to carry
+its own `given`, `when`, and `then` clauses. Sets of contracts
+that share a precondition (a `given` clause that appears
+identically across many entries) currently must repeat that
+clause. A future revision MAY introduce a structural grouping
+form that lets several `when`/`then` cases share a parent
+`given`. Until then, duplication is the workaround; the
+structural-constraint rule against YAML anchors (Section 4.2)
+intentionally does not relax for this case.
+
+**Assumption lifecycle states.** Section 3.5 describes a
+lifecycle for assumptions (ratify, demote, reject) but provides
+no in-band representation of where an assumption sits in that
+lifecycle. The current convention relies on the assumption's
+location (still in the `assumptions` block, or moved out) plus
+git history. A future revision MAY introduce explicit lifecycle
+state, likely as part of the structured-leaf shape sketched in
+Section 4.4. Until then, the workaround is to use commit
+messages and review comments to track lifecycle state.
+
+These three are not the only directions a future revision might
+take. They are the ones that working with v0.1.0 has surfaced as
+real ergonomic limits, and naming them here is meant to focus
+v0.2 design on changes the existing user base has actually
+needed.
 
 ## 4. Serialization (v0.1.0)
 
@@ -536,21 +605,30 @@ Mitigation is the responsibility of the agent runtime and the
 human reviewer; this specification cannot defend against
 adversarial declarations on its own.
 
-Three observations on the threat model are worth recording:
+Four observations on the threat model are worth recording:
 
-- A declaration can specify only what the implementation MUST
-  do, not what it MUST NOT do. The `unconstrained` block (Section
-  3.7) declares aspects intentionally left open, but it is not a
-  capability list. An agent reading a declaration MAY produce
-  behavior that no invariant or contract addresses; whether that
-  behavior is permitted is a question for the agent runtime, not
-  for the specification.
-- The conformance model defined in Section 3.8 is observational
-  and prose-driven. Whoever performs the conformance check can be
-  deceived by ambiguous prose; a check that does not exercise
-  every contract on every implementation can miss regressions.
-  Operators relying on dx-mediated workflows SHOULD treat
-  conformance checking as a gating step, not as an advisory one.
+- A declaration enumerates required and forbidden behaviors via
+  positive and negative invariants (Section 3.4), but it cannot
+  enumerate the universe of unspecified behaviors. The
+  `unconstrained` block (Section 3.7) names aspects intentionally
+  left open, but it is not a capability list. An agent reading a
+  declaration MAY produce behavior that no invariant or contract
+  addresses; whether that behavior is permitted is a question for
+  the agent runtime, not for the specification.
+- Negative invariants strengthen the threat model but do not close
+  it. The conformance model is observational (Section 3.8): a
+  judge can verify that a forbidden output does not appear on
+  stdout, but cannot verify that a forbidden internal property
+  (an unencrypted password in memory, a secret written to a
+  database column) is absent. Negative invariants describing
+  non-observable properties are valid and worth stating, but
+  their verification falls outside what the language guarantees.
+- The conformance model is prose-driven. Whoever performs the
+  conformance check can be deceived by ambiguous prose; a check
+  that does not exercise every contract on every implementation
+  can miss regressions. Operators relying on dx-mediated
+  workflows SHOULD treat conformance checking as a gating step,
+  not as an advisory one.
 - The reserved field set in Section 4.4 anticipates an `author`
   field. An `author` value is self-asserted; the specification
   does not define an authentication mechanism. Treat author
